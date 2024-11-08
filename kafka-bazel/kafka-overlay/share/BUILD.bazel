@@ -1,0 +1,58 @@
+load("//tools-bazel:library_wrappers.bzl", "java_export", "jvm_junit_test_suite")
+load(":generated_test_args.bzl", "per_test_args")
+
+java_export(
+    name = "share",
+    srcs = glob(["src/main/**/*.java"]),
+    classifier_artifacts = {
+        "test": ":share-test-jar",
+    },
+    maven_coordinates = "org.apache.kafka:kafka-share:$(maven_version)",
+    neverlink_option = True,
+    resources = glob(["src/main/resources/**/*"]),
+    tags = ["no-javadocs"],
+    visibility = ["//:__subpackages__"],
+    deps = [
+        "//clients",
+        "@maven//:org_slf4j_slf4j_api",
+    ],
+)
+
+java_library(
+    name = "share-test-jar",
+    srcs = glob(["src/test/java/**/*.java"]),
+    resources = glob(["src/test/resources/**/*"]),
+    tags = [
+        "no-java-checkstyle",
+        "no-java-spotbugs",
+    ],
+    deps = [
+        ":share",
+        "//clients",
+        "@maven//:org_junit_jupiter_junit_jupiter_api",
+        "@maven//:org_junit_jupiter_junit_jupiter_params",
+    ],
+)
+
+jvm_junit_test_suite(
+    name = "share-tests",
+    srcs = glob(
+        ["src/test/**/*.java"],
+    ),
+    additional_library_srcs = [
+    ],
+    per_test_args = per_test_args,
+    tags = ["no-java-spotbugs"],
+    visibility = ["//visibility:public"],
+    runtime_deps = [
+        "@maven//:org_junit_jupiter_junit_jupiter_engine",
+        "@maven//:org_junit_platform_junit_platform_launcher",
+        "@maven//:org_junit_platform_junit_platform_reporting",
+    ],
+    deps = [
+        ":share",
+        "//clients",
+        "@maven//:org_junit_jupiter_junit_jupiter_api",
+        "@maven//:org_junit_jupiter_junit_jupiter_params",
+    ],
+)

@@ -1,0 +1,53 @@
+load("//tools-bazel:library_wrappers.bzl", "java_export", "java_library", "jvm_junit_test_suite")
+load(":generated_test_args.bzl", "per_test_args")
+
+java_export(
+    name = "log4j-appender",
+    srcs = glob(["src/main/**/*.java"]),
+    classifier_artifacts = {
+        "test": ":log4j-appender-test-jar",
+    },
+    maven_coordinates = "org.apache.kafka:kafka-log4j-appender:$(maven_version)",
+    tags = ["no-javadocs"],
+    visibility = ["//:__subpackages__"],
+    deps = [
+        "//clients",
+        "@maven//:ch_qos_reload4j_reload4j",
+        "@maven//:org_slf4j_slf4j_reload4j",
+    ],
+)
+
+java_library(
+    name = "log4j-appender-test-jar",
+    srcs = glob(["src/test/java/**/*.java"]),
+    resources = glob(["src/test/resources/**/*"]),
+    deps = [
+        ":log4j-appender",
+        "//clients",
+        "//clients:clients-tests-test-lib",
+        "//dependencies:mockito_core",
+        "@maven//:ch_qos_reload4j_reload4j",
+        "@maven//:org_hamcrest_hamcrest",
+        "@maven//:org_junit_jupiter_junit_jupiter_api",
+    ],
+)
+
+jvm_junit_test_suite(
+    name = "log4j-appender-tests",
+    srcs = glob(["src/test/**/*.java"]),
+    per_test_args = per_test_args,
+    runtime_deps = [
+        "@maven//:org_junit_jupiter_junit_jupiter_engine",
+        "@maven//:org_junit_platform_junit_platform_launcher",
+        "@maven//:org_junit_platform_junit_platform_reporting",
+    ],
+    deps = [
+        ":log4j-appender",
+        "//clients",
+        "//clients:clients-tests-test-lib",
+        "//dependencies:mockito_core",
+        "@maven//:ch_qos_reload4j_reload4j",
+        "@maven//:org_hamcrest_hamcrest",
+        "@maven//:org_junit_jupiter_junit_jupiter_api",
+    ],
+)

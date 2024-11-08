@@ -1,0 +1,347 @@
+load("@bazel_jar_jar//:jar_jar.bzl", "jar_jar")
+load("@contrib_rules_jvm//java:defs.bzl", "java_binary")
+load("//tools-bazel:library_wrappers.bzl", "java_export", "java_library", "java_library_exclude_runtime_deps", "jvm_junit_test_suite", "maven_export")
+load("//tools-bazel:message_generator.bzl", "message_generator")
+load(":generated_test_args.bzl", "per_test_args")
+
+coordinates = "org.apache.kafka:kafka-clients:$(maven_version)"
+
+message_generator(
+    name = "generated",
+    srcs = glob(["src/main/resources/common/message/**/*.json"]),
+    args = [
+        "-p",
+        "org.apache.kafka.common.message",
+        "-o",
+        "generated/srcs",
+        "-i",
+        "clients/src/main/resources/common/message",
+        "-m",
+        "MessageDataGenerator",
+        "JsonConverterGenerator",
+        "-t",
+        "ApiMessageTypeGenerator",
+    ],
+)
+
+message_generator(
+    name = "generated-test",
+    srcs = glob(["src/test/resources/common/message/**/*.json"]),
+    args = [
+        "-p",
+        "org.apache.kafka.common.message",
+        "-o",
+        "generated/srcs",
+        "-i",
+        "clients/src/test/resources/common/message",
+        "-m",
+        "MessageDataGenerator",
+        "JsonConverterGenerator",
+    ],
+)
+
+maven_export(
+    name = "clients-export",
+    classifier_artifacts = {
+        "test": ":clients-test-jar",
+    },
+    enable_test_jar_copy = True,
+    lib_name = "clients-shaded",
+    maven_coordinates = coordinates,
+    neverlink_option = True,
+    pom_template = "//tools-bazel:pom_clients.tpl",
+    tags = ["no-javadocs"],
+    visibility = ["//visibility:public"],
+)
+
+java_library_exclude_runtime_deps(
+    name = "clients-no-runtime-deps",
+    dep = ":clients",
+    tags = ["maven_coordinates=org.apache.kafka:kafka-clients:$(maven_version)"],  # TODO Make this automatic
+    visibility = ["//visibility:public"],
+)
+
+java_library(
+    name = "clients",
+    srcs = glob(["src/main/**/*.java"]) + [":generated"],
+    neverlink_option = True,
+    resources = glob(["src/main/resources/**/*"]) + [
+        "//:LICENSE",
+        "//:NOTICE",
+        "//:version_file",
+    ],
+    # Commenting this breaks kafka-client-plugins. Uncommenting it adds
+    # an extra clients entry to ce-events
+    tags = ["maven_coordinates=" + coordinates],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//dependencies:compile_only_netty_tcnative_boringssl_static",
+        "@maven//:com_github_luben_zstd_jni",
+        "@maven//:io_opentelemetry_opentelemetry_api",
+        "@maven//:io_opentelemetry_opentelemetry_context",
+        "@maven//:io_opentelemetry_proto_opentelemetry_proto",
+        "@maven//:org_lz4_lz4_java",
+        "@maven//:org_slf4j_slf4j_api",
+        "@maven//:org_xerial_snappy_snappy_java",
+        "@maven_compile_only//:com_fasterxml_jackson_core_jackson_annotations",
+        "@maven_compile_only//:com_fasterxml_jackson_core_jackson_databind",
+        "@maven_compile_only//:com_fasterxml_jackson_datatype_jackson_datatype_jdk8",
+        "@maven_compile_only//:io_netty_netty_all",
+        "@maven_compile_only//:io_netty_netty_buffer",
+        "@maven_compile_only//:io_netty_netty_common",
+        "@maven_compile_only//:io_netty_netty_handler",
+        "@maven_compile_only//:io_netty_netty_tcnative_classes",
+        "@maven_compile_only//:org_bitbucket_b_c_jose4j",
+    ],
+)
+
+java_binary(
+    name = "pre-shaded-exclusions",
+    main_class = "none",
+    visibility = ["//:__subpackages__"],
+    runtime_deps = [
+        # exclude slf4j-api, and compression libraries from the final jar.
+        # These are provided at runtime by kafka-clients transitive dependencies.
+        "@maven//:org_xerial_snappy_snappy_java",  # libs.snappy
+        "@maven//:org_slf4j_slf4j_api",  # libs.slf4jApi
+        "@maven//:org_lz4_lz4_java",  # 'org.lz4:lz4-java'
+        "@maven//:com_github_luben_zstd_jni",  # 'com.github.luben:zstd-jni',
+    ],
+)
+
+java_binary(
+    name = "pre-shaded",
+    deploy_env = [":pre-shaded-exclusions"],
+    main_class = "none",
+    visibility = ["//:__subpackages__"],
+    runtime_deps = [":clients"],
+)
+
+jar_jar(
+    name = "clients-shaded-jar-jar",
+    inline_rules = [
+        "rule io.opentelemetry.proto.** org.apache.kafka.shaded.@0",
+        "rule com.google.protobuf.** org.apache.kafka.shaded.@0",
+        "zap opentelemetry.proto.**",
+        "zap google.protobuf.**",
+    ],
+    input_jar = ":pre-shaded_deploy.jar",
+)
+
+java_library(
+    name = "clients-shaded",
+    tags = ["maven_coordinates=" + coordinates],
+    runtime_deps = [
+        ":clients-shaded-jar-jar",
+        # Add dependencies here for them to appear in the final pom
+        "@maven//:com_github_luben_zstd_jni",
+        "@maven//:org_lz4_lz4_java",
+        "@maven//:org_slf4j_slf4j_api",
+        "@maven//:org_xerial_snappy_snappy_java",
+    ],
+)
+
+java_library(
+    name = "clients-test-jar",
+    srcs = glob(["src/test/java/**/*.java"]) + [":generated-test"],
+    resources = glob(["src/test/resources/**/*"]),
+    tags = [
+        "no-java-checkstyle",
+        "no-java-spotbugs",
+    ],
+    visibility = ["//:__subpackages__"],
+    deps = [
+        ":clients",
+        ":clients-tests-test-lib",
+        "//dependencies:mockito_core",
+        "//dependencies:mockito_junit_jupiter",
+        "@maven//:ch_qos_reload4j_reload4j",
+        "@maven//:com_fasterxml_jackson_core_jackson_databind",
+        "@maven//:io_netty_netty_common",
+        "@maven//:io_netty_netty_handler",
+        "@maven//:io_opentelemetry_opentelemetry_api",
+        "@maven//:io_opentelemetry_opentelemetry_context",
+        "@maven//:io_opentelemetry_proto_opentelemetry_proto",
+        "@maven//:net_jqwik_jqwik_api",
+        "@maven//:org_bitbucket_b_c_jose4j",
+        "@maven//:org_bouncycastle_bc_fips",
+        "@maven//:org_bouncycastle_bcpkix_fips",
+        "@maven//:org_bouncycastle_bcpkix_jdk18on",
+        "@maven//:org_bouncycastle_bcprov_jdk18on",
+        "@maven//:org_junit_jupiter_junit_jupiter_api",
+        "@maven//:org_junit_jupiter_junit_jupiter_params",
+        "@maven//:org_junit_platform_junit_platform_engine",
+        "@maven//:org_junit_platform_junit_platform_launcher",
+        "@maven//:org_lz4_lz4_java",
+        "@maven//:org_opentest4j_opentest4j",
+        "@maven//:org_slf4j_slf4j_api",
+    ],
+)
+
+java_binary(
+    name = "AdminClientConfig",
+    main_class = "org.apache.kafka.clients.admin.AdminClientConfig",
+    visibility = ["//visibility:public"],
+    runtime_deps = [
+        ":clients",
+        "@maven//:org_slf4j_slf4j_nop",
+    ],
+)
+
+java_binary(
+    name = "ConsumerConfig",
+    main_class = "org.apache.kafka.clients.consumer.ConsumerConfig",
+    visibility = ["//visibility:public"],
+    runtime_deps = [
+        ":clients",
+        "@maven//:org_slf4j_slf4j_nop",
+    ],
+)
+
+java_binary(
+    name = "ConsumerMetrics",
+    main_class = "org.apache.kafka.clients.consumer.internals.ConsumerMetrics",
+    visibility = ["//visibility:public"],
+    runtime_deps = [
+        ":clients",
+        "@maven//:org_slf4j_slf4j_nop",
+    ],
+)
+
+java_binary(
+    name = "ProducerConfig",
+    main_class = "org.apache.kafka.clients.producer.ProducerConfig",
+    visibility = ["//visibility:public"],
+    runtime_deps = [
+        ":clients",
+        "@maven//:org_slf4j_slf4j_nop",
+    ],
+)
+
+java_binary(
+    name = "ProducerMetrics",
+    main_class = "org.apache.kafka.clients.producer.internals.ProducerMetrics",
+    visibility = ["//visibility:public"],
+    runtime_deps = [
+        ":clients",
+        "@maven//:org_slf4j_slf4j_nop",
+    ],
+)
+
+java_binary(
+    name = "ApiKeys",
+    main_class = "org.apache.kafka.common.protocol.ApiKeys",
+    visibility = ["//visibility:public"],
+    runtime_deps = [
+        ":clients",
+        "@maven//:org_slf4j_slf4j_nop",
+    ],
+)
+
+java_binary(
+    name = "Errors",
+    main_class = "org.apache.kafka.common.protocol.Errors",
+    visibility = ["//visibility:public"],
+    runtime_deps = [
+        ":clients",
+        "@maven//:org_slf4j_slf4j_nop",
+    ],
+)
+
+java_binary(
+    name = "Protocol",
+    main_class = "org.apache.kafka.common.protocol.Protocol",
+    visibility = ["//visibility:public"],
+    runtime_deps = [
+        ":clients",
+        "@maven//:org_slf4j_slf4j_nop",
+    ],
+)
+
+java_binary(
+    name = "Type",
+    main_class = "org.apache.kafka.common.protocol.types.Type",
+    visibility = ["//visibility:public"],
+    runtime_deps = [
+        ":clients",
+        "@maven//:org_slf4j_slf4j_nop",
+    ],
+)
+
+java_binary(
+    name = "MetadataServerConfig",
+    main_class = "org.apache.kafka.server.http.MetadataServerConfig",
+    visibility = ["//visibility:public"],
+    runtime_deps = [
+        ":clients",
+        "@maven//:org_slf4j_slf4j_nop",
+    ],
+)
+
+jvm_junit_test_suite(
+    name = "clients-tests",
+    srcs = glob(
+        ["src/test/**/*.java"],
+    ) + [":generated-test"],
+    additional_library_srcs = [
+        "src/test/java/org/apache/kafka/clients/admin/ConfigTest.java",
+        "src/test/java/org/apache/kafka/clients/admin/KafkaAdminClientTest.java",
+        "src/test/java/org/apache/kafka/clients/consumer/ConsumerPartitionAssignorTest.java",
+        "src/test/java/org/apache/kafka/clients/consumer/internals/AbstractPartitionAssignorTest.java",
+        "src/test/java/org/apache/kafka/clients/consumer/internals/AbstractStickyAssignorTest.java",
+        "src/test/java/org/apache/kafka/clients/consumer/internals/ConsumerCoordinatorTest.java",
+        "src/test/java/org/apache/kafka/clients/consumer/internals/ShareCompletedFetchTest.java",
+        "src/test/java/org/apache/kafka/common/metrics/TokenBucketTest.java",
+        "src/test/java/org/apache/kafka/common/network/SelectorTest.java",
+        "src/test/java/org/apache/kafka/common/network/SslSelectorTest.java",
+        "src/test/java/org/apache/kafka/common/network/SslTransportLayerTest.java",
+        "src/test/java/org/apache/kafka/common/requests/OffsetCommitResponseTest.java",
+        "src/test/java/org/apache/kafka/common/requests/OffsetCommitRequestTest.java",
+        "src/test/java/org/apache/kafka/common/requests/RequestContextTest.java",
+        "src/test/java/org/apache/kafka/common/security/authenticator/SaslAuthenticatorFailureDelayTest.java",
+        "src/test/java/org/apache/kafka/common/security/authenticator/SaslAuthenticatorTest.java",
+        "src/test/java/org/apache/kafka/common/security/oauthbearer/internals/secured/AccessTokenValidatorTest.java",
+        "src/test/java/org/apache/kafka/common/security/oauthbearer/internals/secured/OAuthBearerTest.java",
+        "src/test/java/org/apache/kafka/common/security/ssl/DefaultSslEngineFactoryTest.java",
+        "src/test/java/org/apache/kafka/common/security/ssl/SslFactoryTest.java",
+        "src/test/java/org/apache/kafka/common/utils/BytesTest.java",
+        "src/test/java/org/apache/kafka/common/utils/ImplicitLinkedHashCollectionTest.java",
+        "src/test/java/org/apache/kafka/common/utils/TimeTest.java",
+    ],
+    per_test_args = per_test_args,
+    resources = glob(["src/test/resources/**/*"]),
+    tags = ["no-java-spotbugs"],
+    visibility = ["//visibility:public"],
+    runtime_deps = [
+        "@maven//:org_junit_jupiter_junit_jupiter_engine",
+        "@maven//:org_junit_platform_junit_platform_launcher",
+        "@maven//:org_junit_platform_junit_platform_reporting",
+    ],
+    deps = [
+        ":clients",
+        "//dependencies:mockito_core",
+        "//dependencies:mockito_junit_jupiter",
+        "//dependencies:netty_tcnative_boringssl_static",
+        "@maven//:ch_qos_reload4j_reload4j",
+        "@maven//:com_fasterxml_jackson_core_jackson_databind",
+        "@maven//:io_netty_netty_common",
+        "@maven//:io_netty_netty_handler",
+        "@maven//:io_opentelemetry_opentelemetry_api",
+        "@maven//:io_opentelemetry_opentelemetry_context",
+        "@maven//:io_opentelemetry_proto_opentelemetry_proto",
+        "@maven//:net_jqwik_jqwik_api",
+        "@maven//:org_bitbucket_b_c_jose4j",
+        "@maven//:org_bouncycastle_bcpkix_jdk18on",
+        "@maven//:org_bouncycastle_bcprov_jdk18on",
+        "@maven//:org_junit_jupiter_junit_jupiter_api",
+        "@maven//:org_junit_jupiter_junit_jupiter_engine",
+        "@maven//:org_junit_jupiter_junit_jupiter_params",
+        "@maven//:org_junit_platform_junit_platform_engine",
+        "@maven//:org_junit_platform_junit_platform_launcher",
+        "@maven//:org_junit_platform_junit_platform_reporting",
+        "@maven//:org_lz4_lz4_java",
+        "@maven//:org_opentest4j_opentest4j",
+        "@maven//:org_slf4j_slf4j_api",
+        "@maven//:org_slf4j_slf4j_reload4j",
+    ],
+)

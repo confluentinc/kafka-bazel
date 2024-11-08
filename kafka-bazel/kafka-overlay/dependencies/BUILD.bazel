@@ -1,0 +1,161 @@
+load("@scala_multiverse//:cross_scala_config.bzl", "maven_dep")
+
+java_library(
+    name = "empty_target",
+    visibility = ["//visibility:public"],
+)
+
+config_setting(
+    name = "mockito_version_4_11",
+    values = {
+        "define": "mockito_version=4.11.0",
+    },
+)
+
+config_setting(
+    name = "mockito_version_4_9",
+    values = {
+        "define": "mockito_version=4.9.0",
+    },
+)
+
+alias(
+    name = "_mockito_inline",
+    actual = select({
+        ":mockito_version_4_9": "@maven_alt_mockito_4_9//:org_mockito_mockito_inline",
+        ":mockito_version_4_11": "@maven_alt_mockito_4_11//:org_mockito_mockito_inline",
+        "//conditions:default": "@maven//:org_mockito_mockito_core",
+    }),
+)
+
+alias(
+    name = "_mockito_core",
+    actual = select({
+        ":mockito_version_4_9": "@maven_alt_mockito_4_9//:org_mockito_mockito_core",
+        ":mockito_version_4_11": "@maven_alt_mockito_4_11//:org_mockito_mockito_core",
+        "//conditions:default": "@maven//:org_mockito_mockito_core",
+    }),
+)
+
+alias(
+    name = "mockito_junit_jupiter",
+    actual = select({
+        ":mockito_version_4_9": "@maven_alt_mockito_4_9//:org_mockito_mockito_junit_jupiter",
+        ":mockito_version_4_11": "@maven_alt_mockito_4_11//:org_mockito_mockito_junit_jupiter",
+        "//conditions:default": "@maven//:org_mockito_mockito_junit_jupiter",
+    }),
+    visibility = ["//visibility:public"],
+)
+
+java_library(
+    name = "mockito_core",
+    visibility = ["//visibility:public"],
+    exports = [
+        ":_mockito_core",
+        ":_mockito_inline",
+    ],
+)
+
+config_setting(
+    name = "use_fips_boring_ssl",
+    values = {
+        "define": "use_fips_boring_ssl=true",
+    },
+)
+
+alias(
+    name = "compile_only_netty_tcnative_boringssl_static",
+    actual = select({
+        ":use_fips_boring_ssl": "@maven_compile_only//:io_netty_netty_tcnative_fips_boringssl_static",
+        "//conditions:default": "@maven_compile_only//:io_netty_netty_tcnative_boringssl_static",
+    }),
+    visibility = ["//visibility:public"],
+)
+
+alias(
+    name = "netty_tcnative_boringssl_static",
+    actual = select({
+        ":use_fips_boring_ssl": "@maven//:io_netty_netty_tcnative_fips_boringssl_static",
+        "//conditions:default": "@maven//:io_netty_netty_tcnative_boringssl_static",
+    }),
+    visibility = ["//visibility:public"],
+)
+
+java_library(
+    name = "netty_tcnative_boringssl_static_all",
+    visibility = ["//visibility:public"],
+    exports = [
+        "@maven//:io_netty_netty_tcnative_boringssl_static",
+        "@maven//:io_netty_netty_tcnative_boringssl_static_linux_aarch_64",
+        "@maven//:io_netty_netty_tcnative_boringssl_static_linux_x86_64",
+        "@maven//:io_netty_netty_tcnative_boringssl_static_osx_aarch_64",
+        "@maven//:io_netty_netty_tcnative_boringssl_static_osx_x86_64",
+        "@maven//:io_netty_netty_tcnative_boringssl_static_windows_x86_64",
+    ],
+)
+
+java_library(
+    name = "compile_only_netty_tcnative_boringssl_static_all",
+    visibility = ["//visibility:public"],
+    exports = [
+        ":compile_only_netty_tcnative_boringssl_static",
+        "@maven_compile_only//:io_netty_netty_tcnative_boringssl_static_linux_aarch_64",
+        "@maven_compile_only//:io_netty_netty_tcnative_boringssl_static_linux_x86_64",
+        "@maven_compile_only//:io_netty_netty_tcnative_boringssl_static_osx_aarch_64",
+        "@maven_compile_only//:io_netty_netty_tcnative_boringssl_static_osx_x86_64",
+        "@maven_compile_only//:io_netty_netty_tcnative_boringssl_static_windows_x86_64",
+    ],
+)
+
+java_library(
+    name = "aws_crt",
+    visibility = ["//visibility:public"],
+    exports = [
+        "@maven//:software_amazon_awssdk_crt_aws_crt",
+        "@maven//:software_amazon_awssdk_crt_aws_crt_linux_aarch_64",
+        "@maven//:software_amazon_awssdk_crt_aws_crt_linux_x86_64",
+    ],
+)
+
+java_library(
+    name = "netty_transport_native_epoll",
+    visibility = ["//visibility:public"],
+    exports = [
+        "@maven//:io_netty_netty_transport_native_epoll",
+        "@maven//:io_netty_netty_transport_native_epoll_linux_aarch_64",
+        "@maven//:io_netty_netty_transport_native_epoll_linux_x86_64",
+    ],
+)
+
+config_setting(
+    name = "easymock_version_4_3",
+    values = {
+        "define": "easymock_version=4.3",
+    },
+)
+
+alias(
+    name = "easymock",
+    actual = select({
+        ":easymock_version_4_3": "@maven_alt_easymock_4_3//:org_easymock_easymock",
+        "//conditions:default": "@maven//:org_easymock_easymock",
+    }),
+    visibility = ["//visibility:public"],
+)
+
+config_setting(
+    name = "scala_version_2_12",
+    values = {
+        "define": "scala_version=2.12",
+    },
+)
+
+# For streams-scala, this dependency is conditional on the Scala version being 2.12
+alias(
+    name = "scala_collection_compat",
+    actual = select({
+        ":scala_version_2_12": maven_dep("org.scala-lang.modules::scala-collection-compat"),
+        "//conditions:default": ":empty_target",
+    }),
+    visibility = ["//visibility:public"],
+)

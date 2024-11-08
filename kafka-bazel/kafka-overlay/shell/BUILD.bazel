@@ -1,0 +1,98 @@
+load("//tools-bazel:copy_system_test_jars.bzl", "conditional_copy_dep_jars")
+load("//tools-bazel:library_wrappers.bzl", "java_export", "java_library", "jvm_junit_test_suite")
+load(":generated_test_args.bzl", "per_test_args")
+
+java_export(
+    name = "shell",
+    srcs = glob(["src/main/**/*.java"]),
+    classifier_artifacts = {
+        "test": ":shell-test-jar",
+    },
+    maven_coordinates = "org.apache.kafka:kafka-shell:$(maven_version)",
+    tags = ["no-javadocs"],
+    visibility = ["//:__subpackages__"],
+    deps = [
+        "//clients",
+        "//core",
+        "//metadata",
+        "//raft",
+        "//server",
+        "//server-common",
+        "@maven//:com_fasterxml_jackson_core_jackson_databind",
+        "@maven//:com_fasterxml_jackson_datatype_jackson_datatype_jdk8",
+        "@maven//:net_sourceforge_argparse4j_argparse4j",
+        "@maven//:org_bitbucket_b_c_jose4j",
+        "@maven//:org_jline_jline",
+        "@maven//:org_scala_lang_modules_scala_java8_compat_2_13",
+        "@maven//:org_slf4j_slf4j_api",
+    ],
+)
+
+java_library(
+    name = "shell-test-jar",
+    srcs = glob(["src/test/java/**/*.java"]),
+    resources = glob(["src/test/resources/**/*"]),
+    tags = [
+        "no-java-checkstyle",
+        "no-java-spotbugs",
+    ],
+    deps = [
+        ":shell",
+        "//clients",
+        "//core",
+        "//core:kafka-testkit",
+        "//dependencies:mockito_core",
+        "//metadata",
+        "//raft",
+        "//server",
+        "//server-common",
+        "//server-common:server-common-tests-test-lib",
+        "@maven//:net_sourceforge_argparse4j_argparse4j",
+        "@maven//:org_junit_jupiter_junit_jupiter_api",
+        "@maven//:org_junit_jupiter_junit_jupiter_params",
+        "@maven//:org_slf4j_slf4j_api",
+    ],
+)
+
+conditional_copy_dep_jars(
+    name = "copy-shell-dep-jars",
+    include_scala_version = True,
+    libs_target = ":shell",
+    libs_target_include_list = ["@maven//:org_jline_jline"],
+    output_directory = "dependant-libs",
+    testlibs_target = [":shell-test-jar"],
+    testlibs_target_include_list = ["@maven//:org_jline_jline"],
+)
+
+jvm_junit_test_suite(
+    name = "shell-tests",
+    srcs = glob(
+        ["src/test/**/*.java"],
+    ),
+    per_test_args = per_test_args,
+    resources = glob(["src/test/resources/**"]),
+    tags = ["no-java-spotbugs"],
+    runtime_deps = [
+        "@maven//:org_junit_jupiter_junit_jupiter_engine",
+        "@maven//:org_junit_platform_junit_platform_launcher",
+        "@maven//:org_junit_platform_junit_platform_reporting",
+    ],
+    deps = [
+        ":shell",
+        "//clients",
+        "//clients:clients-tests-test-lib",
+        "//core",
+        "//core:kafka-testkit",
+        "//core:scala-server-utils-test-utils",
+        "//dependencies:mockito_core",
+        "//metadata",
+        "//raft",
+        "//server",
+        "//server-common",
+        "//server-common:server-common-tests-test-lib",
+        "@maven//:net_sourceforge_argparse4j_argparse4j",
+        "@maven//:org_junit_jupiter_junit_jupiter_api",
+        "@maven//:org_junit_jupiter_junit_jupiter_params",
+        "@maven//:org_slf4j_slf4j_api",
+    ],
+)

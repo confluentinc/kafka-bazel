@@ -1,0 +1,15 @@
+load("@contrib_rules_jvm//java:defs.bzl", "spotbugs_binary", "spotbugs_config")
+
+exports_files(["openapi.template"])
+
+spotbugs_binary(
+    name = "spotbugs_bin",
+    runtime_deps = ["@maven//:com_github_spotbugs_spotbugs"],
+)
+
+spotbugs_config(
+    name = "spotbugs_config",
+    exclude_filter = ":spotbugs-exclude.xml",
+    spotbugs_binary = ":spotbugs_bin",
+    visibility = ["//visibility:public"],
+)

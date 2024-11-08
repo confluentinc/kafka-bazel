@@ -1,0 +1,74 @@
+load("//tools-bazel:copy_system_test_jars.bzl", "conditional_copy_dep_jars")
+load("//tools-bazel:library_wrappers.bzl", "java_export", "java_library", "jvm_junit_test_suite")
+load(":generated_test_args.bzl", "per_test_args")
+
+java_export(
+    name = "mirror-client",
+    srcs = glob(["src/main/**/*.java"]),
+    classifier_artifacts = {
+        "test": ":mirror-client-test-jar",
+    },
+    maven_coordinates = "org.apache.kafka:connect-mirror-client:$(maven_version)",
+    visibility = ["//:__subpackages__"],
+    deps = [
+        "//clients",
+        "@maven//:org_slf4j_slf4j_api",
+    ],
+)
+
+java_library(
+    name = "mirror-client-test-jar",
+    srcs = glob(["src/test/java/**/*.java"]),
+    resources = glob(["src/test/resources/**/*"]),
+    tags = [
+        "no-java-checkstyle",
+        "no-java-spotbugs",
+    ],
+    deps = [
+        ":mirror-client",
+        "//clients",
+        "@maven//:org_junit_jupiter_junit_jupiter_api",
+    ],
+)
+
+conditional_copy_dep_jars(
+    name = "copy-connect-mirror-client-dep-jars",
+    libs_target = ":mirror-client",
+    libs_target_exclude_list = [
+        "//clients",
+        "@maven//:org_bouncycastle_bcpkix_jdk18on",
+        "@maven//:org_bouncycastle_bcprov_jdk18on",
+        "@maven//:org_bouncycastle_bcutil_jdk18on",
+        "@maven//:org_bouncycastle_bc_fips",
+    ],
+    output_directory = "dependant-libs",
+    testlibs_target = [":mirror-client-test-jar"],
+    testlibs_target_exclude_list = [
+        "@maven//:org_bouncycastle_bcpkix_jdk18on",
+        "@maven//:org_bouncycastle_bcprov_jdk18on",
+        "@maven//:org_bouncycastle_bcutil_jdk18on",
+        "@maven//:org_bouncycastle_bc_fips",
+    ],
+    testlibs_target_include_list = [
+        "@maven//:ch_qos_reload4j_reload4j",
+    ],
+)
+
+jvm_junit_test_suite(
+    name = "mirror-client-tests",
+    srcs = glob(["src/test/**/*.java"]),
+    per_test_args = per_test_args,
+    tags = ["no-java-spotbugs"],
+    visibility = ["//visibility:public"],
+    runtime_deps = [
+        "@maven//:org_junit_jupiter_junit_jupiter_engine",
+        "@maven//:org_junit_platform_junit_platform_launcher",
+        "@maven//:org_junit_platform_junit_platform_reporting",
+    ],
+    deps = [
+        ":mirror-client",
+        "//clients",
+        "//connect/mirror:mirror-tests-test-lib",
+        "@maven//:org_junit_jupiter_junit_jupiter_api",
+    ],
+)

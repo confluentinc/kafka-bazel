@@ -1,0 +1,51 @@
+load("@apple_rules_lint//lint:defs.bzl", "package_lint_config")
+load("//tools-bazel:library_wrappers.bzl", "java_export", "java_library", "jvm_junit_test_suite")
+load("//tools-bazel:message_generator.bzl", "message_generator")
+load(":generated_test_args.bzl", "per_test_args")
+
+package_lint_config({
+    "java-checkstyle": "//checkstyle:checkstyle_config_transaction_coordinator",
+})
+
+message_generator(
+    name = "generated",
+    srcs = glob(["src/main/resources/common/message/**/*.json"]),
+    args = [
+        "-p",
+        "org.apache.kafka.coordinator.transaction.generated",
+        "-o",
+        "generated/srcs",
+        "-i",
+        "transaction-coordinator/src/main/resources/common/message",
+        "-m",
+        "MessageDataGenerator",
+        "JsonConverterGenerator",
+    ],
+)
+
+java_export(
+    name = "transaction-coordinator",
+    srcs = glob(["src/main/**/*.java"]) + [":generated"],
+    maven_coordinates = "org.apache.kafka:kafka-transaction-coordinator:$(maven_version)",
+    neverlink_option = True,
+    tags = ["no-javadocs"],
+    visibility = ["//:__subpackages__"],
+    deps = [
+        "//clients",
+        "@maven//:com_fasterxml_jackson_core_jackson_databind",
+    ],
+)
+
+jvm_junit_test_suite(
+    name = "transaction-coordinator-tests",
+    srcs = glob(["src/test/**/*.java"]),
+    per_test_args = per_test_args,
+    tags = ["no-java-spotbugs"],
+    visibility = ["//visibility:public"],
+    runtime_deps = [
+    ],
+    deps = [
+        ":transaction-coordinator",
+        "//clients",
+    ],
+)

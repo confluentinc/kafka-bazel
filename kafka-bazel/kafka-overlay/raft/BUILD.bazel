@@ -1,0 +1,103 @@
+load("//tools-bazel:library_wrappers.bzl", "java_export", "java_library", "jvm_junit_test_suite")
+load("//tools-bazel:message_generator.bzl", "message_generator")
+load(":generated_test_args.bzl", "per_test_args")
+
+message_generator(
+    name = "generated",
+    srcs = glob(["src/main/resources/common/message/**/*.json"]),
+    args = [
+        "-p",
+        "org.apache.kafka.raft.generated",
+        "-o",
+        "generated/srcs",
+        "-i",
+        "raft/src/main/resources/common/message",
+        "-m",
+        "MessageDataGenerator",
+        "JsonConverterGenerator",
+    ],
+)
+
+java_export(
+    name = "raft",
+    srcs = glob(["src/main/**/*.java"]) + [":generated"],
+    classifier_artifacts = {
+        "test": ":raft-test-jar",
+    },
+    maven_coordinates = "org.apache.kafka:kafka-raft:$(maven_version)",
+    neverlink_option = True,
+    resources = [
+        "//:version_file",
+    ] + glob([
+        "src/main/resources/**/*",
+    ]),
+    tags = ["no-javadocs"],
+    visibility = ["//:__subpackages__"],
+    deps = [
+        "//clients",
+        "//server-common",
+        "@maven//:com_fasterxml_jackson_core_jackson_databind",
+        "@maven//:org_slf4j_slf4j_api",
+    ],
+)
+
+java_library(
+    name = "raft-test-jar",
+    srcs = glob(["src/test/java/**/*.java"]),
+    resources = glob(["src/test/resources/**/*"]),
+    tags = [
+        "no-java-checkstyle",
+        "no-java-spotbugs",
+    ],
+    deps = [
+        ":raft",
+        "//clients",
+        "//clients:clients-tests-test-lib",
+        "//dependencies:mockito_core",
+        "//server-common",
+        "//server-common:server-common-tests-test-lib",
+        "@maven//:com_fasterxml_jackson_core_jackson_databind",
+        "@maven//:net_jqwik_jqwik_api",
+        "@maven//:org_hamcrest_hamcrest",
+        "@maven//:org_junit_jupiter_junit_jupiter_api",
+        "@maven//:org_junit_jupiter_junit_jupiter_params",
+        "@maven//:org_slf4j_slf4j_api",
+    ],
+)
+
+jvm_junit_test_suite(
+    name = "raft-tests",
+    srcs = glob(
+        ["src/test/**/*.java"],
+        exclude = ["src/test/java/org/apache/kafka/raft/UnattachedStateWithVoteTest.java"],
+    ),
+    additional_library_srcs = [
+        "src/test/java/org/apache/kafka/raft/KafkaRaftClientSnapshotTest.java",
+        "src/test/java/org/apache/kafka/raft/KafkaRaftClientTest.java",
+        "src/test/java/org/apache/kafka/raft/VoterSetTest.java",
+        "src/test/java/org/apache/kafka/raft/internals/RecordsIteratorTest.java",
+        "src/test/java/org/apache/kafka/snapshot/SnapshotWriterReaderTest.java",
+    ],
+    per_test_args = per_test_args,
+    tags = ["no-java-spotbugs"],
+    visibility = ["//visibility:public"],
+    runtime_deps = [
+        "@maven//:org_junit_jupiter_junit_jupiter_engine",
+        "@maven//:org_junit_platform_junit_platform_launcher",
+        "@maven//:org_junit_platform_junit_platform_reporting",
+    ],
+    deps = [
+        ":raft",
+        "//clients",
+        "//clients:clients-tests-test-lib",
+        "//dependencies:mockito_core",
+        "//server-common",
+        "//server-common:server-common-tests-test-lib",
+        "@maven//:com_fasterxml_jackson_core_jackson_databind",
+        "@maven//:net_jqwik_jqwik_api",
+        "@maven//:org_hamcrest_hamcrest",
+        "@maven//:org_junit_jupiter_junit_jupiter_api",
+        "@maven//:org_junit_jupiter_junit_jupiter_params",
+        "@maven//:org_slf4j_slf4j_api",
+    ],
+)

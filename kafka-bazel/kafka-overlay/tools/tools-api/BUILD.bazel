@@ -1,0 +1,50 @@
+load("@contrib_rules_jvm//java:defs.bzl", "java_binary")
+load("//tools-bazel:library_wrappers.bzl", "java_export", "java_library", "jvm_junit_test_suite")
+load(":generated_test_args.bzl", "per_test_args")
+
+java_export(
+    name = "tools-api",
+    srcs = glob(["src/main/**/*.java"]),
+    classifier_artifacts = {
+        "test": ":tools-api-test-jar",
+    },
+    maven_coordinates = "org.apache.kafka:kafka-tools-api:$(maven_version)",
+    neverlink_option = True,
+    resources = ["//:version_file"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//clients",
+    ],
+)
+
+java_library(
+    name = "tools-api-test-jar",
+    srcs = glob(["src/test/**/*.java"]),
+    tags = [
+        "no-java-checkstyle",
+        "no-java-spotbugs",
+    ],
+    deps = [
+        ":tools-api",
+        "@maven//:org_junit_jupiter_junit_jupiter_api",
+    ],
+)
+
+jvm_junit_test_suite(
+    name = "tools-api-tests",
+    srcs = glob(["src/test/**/*.java"]),
+    per_test_args = per_test_args,
+    prefixes = ["src/test/java/"],
+    tags = ["no-java-spotbugs"],
+    visibility = ["//visibility:public"],
+    runtime_deps = [
+        "@maven//:org_junit_jupiter_junit_jupiter_engine",
+        "@maven//:org_junit_platform_junit_platform_launcher",
+        "@maven//:org_junit_platform_junit_platform_reporting",
+    ],
+    deps = [
+        ":tools-api",
+        "@maven//:org_junit_jupiter_junit_jupiter_api",
+        "@maven//:org_junit_jupiter_junit_jupiter_params",
+    ],
+)

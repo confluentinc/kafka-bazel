@@ -1,0 +1,74 @@
+load("//tools-bazel:library_wrappers.bzl", "java_export", "java_library", "jvm_junit_test_suite")
+load(":generated_test_args.bzl", "per_test_args")
+
+java_export(
+    name = "generator",
+    srcs = glob(["src/main/**/*.java"]),
+    classifier_artifacts = {
+        "test": ":generator-test-jar",
+    },
+    maven_coordinates = "org.apache.kafka:generator:$(maven_version)",
+    tags = ["no-javadocs"],
+    visibility = ["//:__subpackages__"],
+    deps = [
+        "@maven//:com_fasterxml_jackson_core_jackson_annotations",
+        "@maven//:com_fasterxml_jackson_core_jackson_core",
+        "@maven//:com_fasterxml_jackson_core_jackson_databind",
+        "@maven//:com_fasterxml_jackson_datatype_jackson_datatype_jdk8",
+        "@maven//:com_fasterxml_jackson_jaxrs_jackson_jaxrs_json_provider",
+        "@maven//:net_sourceforge_argparse4j_argparse4j",
+    ],
+)
+
+java_library(
+    name = "generator-test-jar",
+    srcs = glob(["src/test/java/**/*.java"]),
+    resources = glob(["src/test/resources/**/*"]),
+    deps = [
+        ":generator",
+        "@maven//:org_junit_jupiter_junit_jupiter_api",
+    ],
+)
+
+java_binary(
+    name = "MessageGenerator",
+    main_class = "org.apache.kafka.message.MessageGenerator",
+    visibility = ["//visibility:public"],
+    runtime_deps = [":generator"],
+)
+
+jvm_junit_test_suite(
+    name = "generator-tests",
+    srcs = glob(
+        ["src/test/**/*.java"],
+        exclude = ["src/test/java/org/apache/kafka/message/IsNullConditionalTest.java"],
+    ),
+    per_test_args = per_test_args,
+    runtime_deps = [
+        "@maven//:org_junit_jupiter_junit_jupiter_engine",
+        "@maven//:org_junit_platform_junit_platform_launcher",
+        "@maven//:org_junit_platform_junit_platform_reporting",
+    ],
+    deps = [
+        ":generator",
+        "@maven//:org_junit_jupiter_junit_jupiter_api",
+    ],
+)
+
+jvm_junit_test_suite(
+    name = "IsNullConditionalTest",
+    srcs = [
+        "src/test/java/org/apache/kafka/message/IsNullConditionalTest.java",
+    ],
+    per_test_args = per_test_args,
+    runtime_deps = [
+        "@maven//:org_junit_jupiter_junit_jupiter_engine",
+        "@maven//:org_junit_platform_junit_platform_launcher",
+        "@maven//:org_junit_platform_junit_platform_reporting",
+    ],
+    deps = [
+        ":generator",
+        "//generator:src/test/java/org/apache/kafka/message/VersionConditionalTest",
+        "@maven//:org_junit_jupiter_junit_jupiter_api",
+    ],
+)

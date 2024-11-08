@@ -1,0 +1,61 @@
+version: v1.0
+name: kafka-bazel-full-test-suite
+agent:
+  machine:
+    type: s1-prod-ubuntu20-04-arm64-5
+fail_fast:
+  cancel:
+    when: "true"
+execution_time_limit:
+  hours: 12
+queue:
+  - when: "branch != 'master'"
+    processing: parallel
+global_job_config:
+  prologue:
+    commands:
+      - checkout
+      - . vault-setup
+      - . vault-sem-get-secret ci-reporting
+      - . vault-sem-get-secret sox-semaphore-build-info
+      - sem-version java 21
+blocks:
+  - name:  "Bazel Test"
+    dependencies: []
+    task:
+      agent:
+        machine:
+          type: s1-prod-ubuntu20-04-arm64-5
+      prologue:
+        commands:
+          - echo $SEMAPHORE_WORKFLOW_ID
+          - echo $SEMAPHORE_PROJECT_NAME
+          - make docker-login-ci
+      jobs:
+        - name: "Bazel Test - arm64"
+          commands:
+            - export CI_SCALA_VERSION="2.13"
+            - bazel test //:update_bazelrc_tests
+            - bazel run //:update_bazelrc_ci
+            - bazel test //... --noremote_accept_cached
+          execution_time_limit:
+            minutes: 180
+      env_vars:
+        - name: CI_KAFKA_TOPIC
+          value: "ci-bazel"
+        - name: SEMAPHORE_PROJECT_NAME
+          value: "kafka-bazel-full-test-suite"
+      epilogue:
+        always:
+          commands:
+            - emit-ci-metrics -b Bazel -f bep_test.json -j -r -c bazel_trace_profile.json
+            - TEST_LOG_DIR=$(bazel info bazel-testlogs)
+            - find "$TEST_LOG_DIR" -type f -name 'attempt*.xml' -exec rm -rf {} \;
+            - test-results publish --name bazel-arm64 --parser embedded --trim-output-to 1024 --omit-output-for-passed --no-raw "$TEST_LOG_DIR"
+
+after_pipeline:
+  task:
+    jobs:
+      - name: Publish Test Results
+        commands:
+          - test-results gen-pipeline-report

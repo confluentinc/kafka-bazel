@@ -1,0 +1,54 @@
+load("@rules_pkg//pkg:mappings.bzl", "pkg_attributes", "pkg_filegroup", "pkg_files", "strip_prefix")
+load("@rules_pkg//pkg:tar.bzl", "pkg_tar")
+
+bin_755_srcs = glob(
+    [
+        "zookeeper-*",
+        "kafka-*",
+        "connect-*",
+        "aegis-*",
+        "git-hooks/*",
+        "trogdor.sh",
+    ],
+    exclude = ["BUILD.bazel"],
+) + ["windows/kafka-run-class.bat"]
+
+pkg_files(
+    name = "bin_644",
+    srcs = glob(
+        ["**/*"],
+        exclude = ["BUILD.bazel"] + bin_755_srcs,
+    ),
+    attributes = pkg_attributes(
+        gid = 65532,
+        group = "nonroot",
+        mode = "0644",
+        uid = 65532,
+        user = "nonroot",
+    ),
+    prefix = "bin",
+    strip_prefix = strip_prefix.from_pkg(),
+)
+
+pkg_files(
+    name = "bin_755",
+    srcs = bin_755_srcs,
+    attributes = pkg_attributes(
+        gid = 65532,
+        group = "nonroot",
+        mode = "0755",
+        uid = 65532,
+        user = "nonroot",
+    ),
+    prefix = "bin",
+    strip_prefix = strip_prefix.from_pkg(),
+)
+
+pkg_filegroup(
+    name = "bin",
+    srcs = [
+        ":bin_644",
+        ":bin_755",
+    ],
+    visibility = ["//:__subpackages__"],
+)

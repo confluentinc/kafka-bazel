@@ -1,0 +1,127 @@
+
+"""Helper functions for use in the copy.bara.sky file."""
+
+def multiple_simple_replacements(replacements, paths):
+    """Perform multiple simple replacements on a set of files.
+    
+    Args:
+        replacements (dict): A dictionary of replacements to make.
+            ex. {
+                "//toolchains": "@kafka//toolchains",
+            }
+        paths (list): A list of paths to apply the replacements to.
+            ex. glob(["kafka-bazel/WORKSPACE.bazel"])
+    Returns:
+        core.transform: A list of transformations.
+    """
+    transformations = []
+    for before, after in replacements.items():
+        transformations.append(
+            core.replace(
+                before = before,
+                after = after,
+                multiline = False,
+                paths = paths,
+            )
+        )
+    return core.transform(transformations=transformations)
+
+def buildozer_modify(modify_dict):
+    """Create a list of buildozer modify transformations.
+
+    Args:
+        modify_dict (dict): A dictionary containing the target and
+            commands to modify.
+            ex. {
+                    "//pkg:%cc_library": [
+                        'remove deps //ce-events-api',
+                    ],
+                },
+    Returns:
+        core.transform: A list of buildozer modify transformations.
+    """
+    transformations = []
+    for target, commands in modify_dict.items():
+        transformations.append(
+            buildozer.modify(
+                target = target,
+                commands = commands,
+            )
+        )
+    # FIXME: Disable reversals for now
+    return core.transform(transformations=transformations, reversal=[])
+
+def remove_dependencies(target, dependencies):
+    """Remove dependencies from a BUILD file
+    
+    Args:
+        target (str): The target file to modify such as
+            //pkg:%cc_library or kafka-bazel/kafka-overlay/clients:clients
+        dependencies (list): A list of dependencies to remove.
+            ex. ["//ce-events-api"]
+    Returns:
+        dict: A buildozer modify transformation.
+    """
+    commands = []
+    for dependency in dependencies:
+        commands.append(buildozer.cmd('remove deps %s' % dependency))
+        
+    return buildozer.modify(
+        target = target,
+        commands = commands,
+    )
+
+
+def remove_dependency(target, dependency):
+    """Remove a dependency from a BUILD file
+    
+    Args:
+        target (str): The target file to modify such as
+            //pkg:%cc_library or kafka-bazel/kafka-overlay/clients:clients
+        dependency (str): The dependency to remove.
+            ex. //ce-events-api
+    """
+    return remove_dependencies(target, [dependency])
+
+
+def strip_all_proprietary():
+    """Remove all proprietary code from the repository.
+    
+    This looks for the tags: BEGIN COPYBARA REMOVE & END COPYBARA REMOVE
+    https://github.com/google/copybara/blob/master/docs/reference.md#remove-confidential-blocks
+    """
+    return core.replace(
+        before = "${x}",
+        after = "",
+        multiline = True,
+        regex_groups = {
+            "x": "(?m)^.*BEGIN COPYBARA REMOVE[\\w\\W]*?END COPYBARA REMOVE.*$\\n",
+        },
+    )
+
+def insert_after(content, file):
+    return core.transform([
+        core.replace(
+        before = '${end}',
+        after  = content,
+        multiline = True,
+        paths = glob([file]),
+        regex_groups = { 'end' : r'\z'},
+        )
+    ],
+    # FIXME: Figure out if we need this field
+    reversal = [],)
+
+def insert_before(content, file):
+    return core.transform([
+        core.replace(
+        before = '${start}',
+        after  = content,
+        multiline = True,
+        paths = glob([file]),
+        regex_groups = { 'start': r'^'},
+        first_only = True,
+        )
+    ],
+    # FIXME: Figure out if we need this field
+    reversal = [],)

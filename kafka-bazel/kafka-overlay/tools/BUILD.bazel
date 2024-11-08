@@ -1,0 +1,278 @@
+load("@contrib_rules_jvm//java:defs.bzl", "java_binary")
+load("//tools-bazel:copy_system_test_jars.bzl", "conditional_copy_dep_jars")
+load("//tools-bazel:library_wrappers.bzl", "java_export", "java_library", "jvm_junit_test_suite")
+load(":generated_test_args.bzl", "per_test_args")
+
+java_export(
+    name = "tools",
+    srcs = glob(["src/main/**/*.java"]),
+    classifier_artifacts = {
+        "test": ":tools-test-jar",
+    },
+    maven_coordinates = "org.apache.kafka:kafka-tools:$(maven_version)",
+    resources = glob(["src/main/resources/**/*"]),
+    tags = ["no-javadocs"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//clients",
+        "//connect/runtime",
+        "//core",
+        "//group-coordinator",
+        "//metadata",
+        "//raft",
+        "//server",
+        "//server-common",
+        "//storage",
+        "//transaction-coordinator",
+        "@maven//:ch_qos_reload4j_reload4j",
+        "@maven//:com_fasterxml_jackson_core_jackson_annotations",
+        "@maven//:com_fasterxml_jackson_core_jackson_core",
+        "@maven//:com_fasterxml_jackson_core_jackson_databind",
+        "@maven//:com_fasterxml_jackson_dataformat_jackson_dataformat_csv",
+        "@maven//:com_fasterxml_jackson_datatype_jackson_datatype_jdk8",
+        "@maven//:net_sf_jopt_simple_jopt_simple",
+        "@maven//:net_sourceforge_argparse4j_argparse4j",
+        "@maven//:org_bitbucket_b_c_jose4j",
+        "@maven//:org_slf4j_slf4j_api",
+        "@maven//:org_slf4j_slf4j_reload4j",
+    ],
+)
+
+java_library(
+    name = "tools-test-jar",
+    srcs = glob(["src/test/java/**/*.java"]),
+    resources = glob(["src/test/resources/**/*"]),
+    tags = ["no-java-spotbugs"],
+    deps = [
+        ":tools",
+        "//clients",
+        "//clients:clients-tests-test-lib",
+        "//connect/runtime",
+        "//connect/runtime:runtime-project",
+        "//connect/runtime:runtime-tests-test-lib",
+        "//core",
+        "//core:scala-server-utils-test-utils",
+        "//dependencies:mockito_core",
+        "//dependencies:mockito_junit_jupiter",
+        "//group-coordinator",
+        "//metadata",
+        "//raft",
+        "//server",
+        "//server-common",
+        "//server-common:server-common-tests-test-lib",
+        "//storage",
+        "//storage:storage-tests-test-lib",
+        "//storage/api",
+        "//transaction-coordinator",
+        "@io_bazel_rules_scala_scala_library//jar",
+        "@maven//:ch_qos_reload4j_reload4j",
+        "@maven//:com_fasterxml_jackson_core_jackson_core",
+        "@maven//:com_fasterxml_jackson_core_jackson_databind",
+        "@maven//:com_fasterxml_jackson_dataformat_jackson_dataformat_csv",
+        "@maven//:com_fasterxml_jackson_datatype_jackson_datatype_jdk8",
+        "@maven//:jfree_jcommon",
+        "@maven//:jfree_jfreechart",
+        "@maven//:net_sf_jopt_simple_jopt_simple",
+        "@maven//:net_sourceforge_argparse4j_argparse4j",
+        "@maven//:org_junit_jupiter_junit_jupiter_api",
+        "@maven//:org_junit_jupiter_junit_jupiter_params",
+        "@maven//:org_scala_lang_modules_scala_collection_compat_2_12",
+        "@maven//:org_slf4j_slf4j_api",
+    ],
+)
+
+conditional_copy_dep_jars(
+    name = "copy-tools-dep-jars",
+    include_scala_version = True,
+    libs_target = ":tools",
+    libs_target_exclude_list = ["//clients"],
+    output_directory = "dependant-libs",
+    testlibs_target = [":tools-test-jar"],
+    testlibs_target_include_list = [
+        "@maven//:ch_qos_reload4j_reload4j",
+    ],
+)
+
+java_binary(
+    name = "MetadataRecoveryTool",
+    main_class = "io.confluent.kafka.tools.recovery.MetadataRecoveryTool",
+    visibility = ["//visibility:public"],
+    runtime_deps = [":tools"],
+)
+
+java_binary(
+    name = "ClientCompatibilityTest",
+    main_class = "org.apache.kafka.tools.ClientCompatibilityTest",
+    visibility = ["//visibility:public"],
+    runtime_deps = [":tools"],
+)
+
+java_binary(
+    name = "ClusterTool",
+    main_class = "org.apache.kafka.tools.ClusterTool",
+    visibility = ["//visibility:public"],
+    runtime_deps = [":tools"],
+)
+
+java_binary(
+    name = "ConsumerPerformance",
+    main_class = "org.apache.kafka.tools.ConsumerPerformance",
+    visibility = ["//visibility:public"],
+    runtime_deps = [":tools"],
+)
+
+java_binary(
+    name = "DelegationTokenCommand",
+    main_class = "org.apache.kafka.tools.DelegationTokenCommand",
+    visibility = ["//visibility:public"],
+    runtime_deps = [":tools"],
+)
+
+java_binary(
+    name = "EndToEndLatency",
+    main_class = "org.apache.kafka.tools.EndToEndLatency",
+    visibility = ["//visibility:public"],
+    runtime_deps = [":tools"],
+)
+
+java_binary(
+    name = "FeatureCommand",
+    main_class = "org.apache.kafka.tools.FeatureCommand",
+    visibility = ["//visibility:public"],
+    runtime_deps = [":tools"],
+)
+
+java_binary(
+    name = "JmxTool",
+    main_class = "org.apache.kafka.tools.JmxTool",
+    visibility = ["//visibility:public"],
+    runtime_deps = [":tools"],
+)
+
+java_binary(
+    name = "MetadataQuorumCommand",
+    main_class = "org.apache.kafka.tools.MetadataQuorumCommand",
+    visibility = ["//visibility:public"],
+    runtime_deps = [":tools"],
+)
+
+java_binary(
+    name = "MultiTenantInfoCommand",
+    main_class = "org.apache.kafka.tools.MultiTenantInfoCommand",
+    visibility = ["//visibility:public"],
+    runtime_deps = [":tools"],
+)
+
+java_binary(
+    name = "OAuthCompatibilityTool",
+    main_class = "org.apache.kafka.tools.OAuthCompatibilityTool",
+    visibility = ["//visibility:public"],
+    runtime_deps = [":tools"],
+)
+
+java_binary(
+    name = "ProducerPerformance",
+    main_class = "org.apache.kafka.tools.ProducerPerformance",
+    visibility = ["//visibility:public"],
+    runtime_deps = [":tools"],
+)
+
+java_binary(
+    name = "TransactionalMessageCopier",
+    main_class = "org.apache.kafka.tools.TransactionalMessageCopier",
+    visibility = ["//visibility:public"],
+    runtime_deps = [":tools"],
+)
+
+java_binary(
+    name = "TransactionsCommand",
+    main_class = "org.apache.kafka.tools.TransactionsCommand",
+    visibility = ["//visibility:public"],
+    runtime_deps = [":tools"],
+)
+
+java_binary(
+    name = "VerifiableConsumer",
+    main_class = "org.apache.kafka.tools.VerifiableConsumer",
+    visibility = ["//visibility:public"],
+    runtime_deps = [":tools"],
+)
+
+java_binary(
+    name = "VerifiableLog4jAppender",
+    main_class = "org.apache.kafka.tools.VerifiableLog4jAppender",
+    visibility = ["//visibility:public"],
+    runtime_deps = [":tools"],
+)
+
+java_binary(
+    name = "VerifiableProducer",
+    main_class = "org.apache.kafka.tools.VerifiableProducer",
+    visibility = ["//visibility:public"],
+    runtime_deps = [":tools"],
+)
+
+java_binary(
+    name = "CellsAdminCommand",
+    main_class = "org.apache.kafka.tools.cellsadmincmd.CellsAdminCommand",
+    visibility = ["//visibility:public"],
+    runtime_deps = [":tools"],
+)
+
+java_binary(
+    name = "DefaultTenantLoadFunction",
+    main_class = "org.apache.kafka.tools.tenantplacementadvisor.DefaultTenantLoadFunction",
+    visibility = ["//visibility:public"],
+    runtime_deps = [":tools"],
+)
+
+jvm_junit_test_suite(
+    name = "tools-tests",
+    srcs = glob(["src/test/**/*.java"]),
+    additional_library_srcs = [
+        "src/test/java/org/apache/kafka/tools/reassign/ReassignPartitionsCommandTest.java",
+    ],
+    per_test_args = per_test_args,
+    tags = ["no-java-spotbugs"],
+    visibility = ["//visibility:public"],
+    runtime_deps = [
+        "@maven//:io_dropwizard_metrics_metrics_core",
+        "@maven//:org_junit_jupiter_junit_jupiter_engine",
+        "@maven//:org_junit_platform_junit_platform_launcher",
+        "@maven//:org_junit_platform_junit_platform_reporting",
+    ],
+    deps = [
+        ":tools",
+        "//clients",
+        "//clients:clients-tests-test-lib",
+        "//connect/runtime",
+        "//connect/runtime:runtime-tests-test-lib",
+        "//core",
+        "//core:scala-server-utils-test-utils",
+        "//dependencies:mockito_core",
+        "//dependencies:mockito_junit_jupiter",
+        "//group-coordinator",
+        "//metadata",
+        "//raft",
+        "//server",
+        "//server-common",
+        "//server-common:server-common-tests-test-lib",
+        "//storage",
+        "//storage:storage-tests-test-lib",
+        "//transaction-coordinator",
+        "@io_bazel_rules_scala_scala_library//jar",
+        "@maven//:ch_qos_reload4j_reload4j",
+        "@maven//:com_fasterxml_jackson_core_jackson_core",
+        "@maven//:com_fasterxml_jackson_core_jackson_databind",
+        "@maven//:com_fasterxml_jackson_dataformat_jackson_dataformat_csv",
+        "@maven//:com_fasterxml_jackson_datatype_jackson_datatype_jdk8",
+        "@maven//:jfree_jcommon",
+        "@maven//:jfree_jfreechart",
+        "@maven//:net_sf_jopt_simple_jopt_simple",
+        "@maven//:net_sourceforge_argparse4j_argparse4j",
+        "@maven//:org_junit_jupiter_junit_jupiter_api",
+        "@maven//:org_junit_jupiter_junit_jupiter_params",
+        "@maven//:org_scala_lang_modules_scala_collection_compat_2_12",
+        "@maven//:org_slf4j_slf4j_api",
+    ],
+)

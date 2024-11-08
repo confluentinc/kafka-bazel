@@ -1,0 +1,104 @@
+load("@contrib_rules_jvm//java:defs.bzl", "checkstyle_binary", "checkstyle_config")
+load("//checkstyle:checkstyle.bzl", "checkstyle_config_wrapped")
+
+filegroup(
+    name = "scalafmt_config",
+    srcs = [".scalafmt.conf"],
+    visibility = ["//visibility:public"],
+)
+
+checkstyle_binary(
+    name = "checkstyle_bin",
+    visibility = ["//visibility:public"],
+    runtime_deps = ["@maven//:com_puppycrawl_tools_checkstyle"],
+)
+
+checkstyle_config_wrapped(
+    name = "checkstyle_config",
+    checkstyle_binary = "//checkstyle:checkstyle_bin",
+    checkstyle_xml = "checkstyle.xml",
+    import_control_xml = "import-control.xml",
+    java_header = "java.header",
+    suppressions_xml = "suppressions.xml",
+)
+
+checkstyle_config_wrapped(
+    name = "checkstyle_config_core",
+    checkstyle_binary = "//checkstyle:checkstyle_bin",
+    checkstyle_xml = "checkstyle.xml",
+    import_control_xml = "import-control-core.xml",
+    java_header = "java.header",
+    suppressions_xml = "suppressions.xml",
+)
+
+checkstyle_config_wrapped(
+    name = "checkstyle_config_jmh_benchmarks",
+    checkstyle_binary = "//checkstyle:checkstyle_bin",
+    checkstyle_xml = "checkstyle.xml",
+    import_control_xml = "import-control-jmh-benchmarks.xml",
+    java_header = "java.header",
+    suppressions_xml = "suppressions.xml",
+)
+
+checkstyle_config_wrapped(
+    name = "checkstyle_config_metadata",
+    checkstyle_binary = "//checkstyle:checkstyle_bin",
+    checkstyle_xml = "checkstyle.xml",
+    import_control_xml = "import-control-metadata.xml",
+    java_header = "java.header",
+    suppressions_xml = "suppressions.xml",
+)
+
+checkstyle_config_wrapped(
+    name = "checkstyle_config_server",
+    checkstyle_binary = "//checkstyle:checkstyle_bin",
+    checkstyle_xml = "checkstyle.xml",
+    import_control_xml = "import-control-server.xml",
+    java_header = "java.header",
+    suppressions_xml = "suppressions.xml",
+)
+
+checkstyle_config_wrapped(
+    name = "checkstyle_config_server_common",
+    checkstyle_binary = "//checkstyle:checkstyle_bin",
+    checkstyle_xml = "checkstyle.xml",
+    import_control_xml = "import-control-server-common.xml",
+    java_header = "java.header",
+    suppressions_xml = "suppressions.xml",
+)
+
+checkstyle_config_wrapped(
+    name = "checkstyle_config_storage",
+    checkstyle_binary = "//checkstyle:checkstyle_bin",
+    checkstyle_xml = "checkstyle.xml",
+    import_control_xml = "import-control-storage.xml",
+    java_header = "java.header",
+    suppressions_xml = "suppressions.xml",
+)
+
+checkstyle_config_wrapped(
+    name = "checkstyle_config_transaction_coordinator",
+    checkstyle_binary = "//checkstyle:checkstyle_bin",
+    checkstyle_xml = "checkstyle.xml",
+    import_control_xml = "import-control-transaction-coordinator.xml",
+    java_header = "java.header",
+    suppressions_xml = "suppressions.xml",
+)
+
+checkstyle_config_wrapped(
+    name = "checkstyle_config_group_coordinator",
+    checkstyle_binary = "//checkstyle:checkstyle_bin",
+    checkstyle_xml = "checkstyle.xml",
+    import_control_xml = "import-control-group-coordinator.xml",
+    java_header = "java.header",
+    suppressions_xml = "suppressions.xml",
+)
+
+checkstyle_config_wrapped(
+    name = "checkstyle_config_coordinator_common",
+    checkstyle_binary = "//checkstyle:checkstyle_bin",
+    checkstyle_xml = "checkstyle.xml",
+    import_control_xml = "import-control-coordinator-common.xml",
+    java_header = "java.header",
+    suppressions_xml = "suppressions.xml",
+)

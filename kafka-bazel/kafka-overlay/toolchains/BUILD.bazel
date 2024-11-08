@@ -1,0 +1,202 @@
+load("@bazel_tools//tools/jdk:default_java_toolchain.bzl", "default_java_toolchain")
+load("@io_bazel_rules_scala//scala:scala.bzl", "setup_scala_toolchain")
+load("@io_bazel_rules_scala_config//:config.bzl", "SCALA_MAJOR_VERSION")
+load("@scala_multiverse//:cross_scala_config.bzl", "SCALAC_OPTS")
+
+config_setting(
+    name = "java_language_version_11",
+    values = {
+        "java_language_version": "11",
+    },
+)
+
+_SCALA_COMPILE_CLASSPATH_DEPS = [
+    "@io_bazel_rules_scala_scala_compiler",
+    "@io_bazel_rules_scala_scala_library",
+] + (["@io_bazel_rules_scala_scala_reflect"] if SCALA_MAJOR_VERSION.startswith("2") else [
+    "@io_bazel_rules_scala_scala_interfaces",
+    "@io_bazel_rules_scala_scala_tasty_core",
+    "@io_bazel_rules_scala_scala_asm",
+    "@io_bazel_rules_scala_scala_library_2",
+])
+
+_SCALA_LIBRARY_CLASSPATH_DEPS = [
+    "@io_bazel_rules_scala_scala_library",
+] + (["@io_bazel_rules_scala_scala_reflect"] if SCALA_MAJOR_VERSION.startswith("2") else [
+    "@io_bazel_rules_scala_scala_library_2",
+])
+
+_SCALA_MACRO_CLASSPATH_DEPS = [
+    "@io_bazel_rules_scala_scala_library",
+] + (["@io_bazel_rules_scala_scala_reflect"] if SCALA_MAJOR_VERSION.startswith("2") else [
+    "@io_bazel_rules_scala_scala_library_2",
+])
+
+_PARSER_COMBINATORS_DEPS = ["@io_bazel_rules_scala_scala_parser_combinators"]
+
+_SCALA_XML_DEPS = ["@io_bazel_rules_scala_scala_xml"]
+
+SCALAC_JVM_FLAGS = [
+    "-Xss100m",
+]
+
+setup_scala_toolchain(
+    name = "default_toolchain",
+    scala_compile_classpath = _SCALA_COMPILE_CLASSPATH_DEPS,
+    scala_library_classpath = _SCALA_LIBRARY_CLASSPATH_DEPS,
+    scala_macro_classpath = _SCALA_MACRO_CLASSPATH_DEPS,
+    #    scala_test_jvm_flags = SCALAC_JVM_FLAGS,
+    scalac_jvm_flags = select({
+        ":java_language_version_11": SCALAC_JVM_FLAGS,
+        "//conditions:default": SCALAC_JVM_FLAGS + ["-Djava.security.manager=allow"],
+    }),
+    scalacopts = SCALAC_OPTS,
+    use_argument_file_in_runner = True,
+)
+
+[default_java_toolchain(
+    name = "java_%s_toolchain" % VERSION,
+    configuration = dict(),
+    package_configuration = [
+        # This configuration is passed after source_version and target_version so it can override them
+        ":xlint",
+        ":java_8",
+        ":werror",
+        ":xlint_rawtypes_disabled",
+        ":xlint_options_disabled",
+        ":errorprone_disabled",
+    ],
+    source_version = VERSION,
+    target_version = VERSION,
+    visibility = ["//visibility:public"],
+) for VERSION in [
+    "11",
+    "17",
+]]
+
+default_java_toolchain(
+    name = "java_21_toolchain",
+    configuration = dict(),
+    package_configuration = [
+        # This configuration is passed after source_version and target_version so it can override them
+        ":xlint",
+        ":java_8",
+        ":werror",
+        ":xlint_rawtypes_disabled",
+        ":xlint_options_disabled",
+        ":errorprone_disabled",
+    ],
+    source_version = "21",
+    target_version = "21",
+    visibility = ["//visibility:public"],
+)
+
+java_package_configuration(
+    name = "java_8",
+    javacopts = ["--release 8"],
+    packages = [
+        ":java8_packages",
+    ],
+)
+
+java_package_configuration(
+    name = "errorprone_disabled",
+    javacopts = ["-XepDisableAllChecks"],
+    packages = [":errorprone_disabled_packages"],
+)
+
+java_package_configuration(
+    name = "xlint_rawtypes_disabled",
+    javacopts = ["-Xlint:-rawtypes"],
+    packages = [":raw_types_lint_disabled_packages"],
+)
+
+java_package_configuration(
+    name = "werror",
+    javacopts = ["-Werror"],
+    packages = [":werror_packages"],
+)
+
+java_package_configuration(
+    name = "xlint_options_disabled",
+    javacopts = ["-Xlint:-options"],
+    packages = [":all_packages"],
+)
+
+java_package_configuration(
+    name = "xlint",
+    javacopts = [
+        "-Xlint:all",
+        "-Xlint:-classfile",
+        "-Xlint:-serial",
+        "-Xlint:-try",
+    ],
+    packages = [":all_packages"],
+)
+
+package_group(
+    name = "all_packages",
+    packages = [
+        "//...",
+    ],
+)
+
+package_group(
+    name = "werror_packages",
+    packages = [
+        "-//core/...",
+        "//...",
+    ],
+)
+
+package_group(
+    name = "java8_packages",
+    packages = [
+        "//...",
+        # exclude Java 21 packages
+        "-//conflux/...",
+        "-//k2-kafka/...",
+        "-//k2-core-integration/...",
+        "-//k2-benchmarks/...",
+    ],
+)
+
+package_group(
+    name = "errorprone_disabled_packages",
+    packages = [
+        "//...",
+        # exclude packages for which we want error-prone enabled
+        "-//conflux-java8/...",
+        "-//conflux/...",
+        "-//k2-kafka/...",
+        "-//k2-core-integration/...",
+        "-//k2-benchmarks/...",
+        "-//k2-kafka-java8/...",
+    ],
+)
+
+package_group(
+    name = "raw_types_lint_disabled_packages",
+    packages = [
+        "//...",
+        # exclude packages for which we want raw types linting enabled
+        "-//connect/...",
+        "-//conflux-java8/...",
+    ],
+)
+
+# This toolchain is not registered. It is referenced explicitly in scala_library rules
+default_java_toolchain(
+    name = "scala_java_toolchain",
+    configuration = dict(),
+    javacopts = ["--release 8"],
+    package_configuration = [
+        ":xlint",
+        ":xlint_options_disabled",
+        ":xlint_rawtypes_disabled",
+        ":errorprone_disabled",
+    ],
+    source_version = "8",
+    target_version = "8",
+    visibility = ["//visibility:public"],
+)

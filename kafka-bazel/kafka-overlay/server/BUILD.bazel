@@ -1,0 +1,81 @@
+load("@apple_rules_lint//lint:defs.bzl", "package_lint_config")
+load("//tools-bazel:library_wrappers.bzl", "java_export", "java_library", "jvm_junit_test_suite")
+load(":generated_test_args.bzl", "per_test_args")
+
+package_lint_config({
+    "java-checkstyle": "//checkstyle:checkstyle_config_server",
+})
+
+java_export(
+    name = "server",
+    srcs = glob(["src/main/**/*.java"]),
+    classifier_artifacts = {
+        "test": ":server-test-jar",
+    },
+    maven_coordinates = "org.apache.kafka:kafka-server:$(maven_version)",
+    neverlink_option = True,
+    resources = ["//:version_file"],
+    tags = ["no-javadocs"],
+    visibility = ["//:__subpackages__"],
+    deps = [
+        "//clients",
+        "//group-coordinator",
+        "//metadata",
+        "//raft",
+        "//server-common",
+        "//storage",
+        "//transaction-coordinator",
+        "@maven//:com_fasterxml_jackson_core_jackson_databind",
+        "@maven//:com_yammer_metrics_metrics_core",
+        "@maven//:org_slf4j_slf4j_api",
+    ],
+)
+
+java_library(
+    name = "server-test-jar",
+    srcs = glob(["src/test/java/**/*.java"]),
+    resources = glob(["src/test/resources/**/*"]),
+    tags = [
+        "no-java-checkstyle",
+        "no-java-spotbugs",
+    ],
+    deps = [
+        ":server",
+        "//clients",
+        "//clients:clients-tests-test-lib",
+        "//dependencies:mockito_core",
+        "//group-coordinator",
+        "//metadata",
+        "//server-common",
+        "//transaction-coordinator",
+        "@maven//:com_yammer_metrics_metrics_core",
+        "@maven//:org_junit_jupiter_junit_jupiter_api",
+        "@maven//:org_junit_jupiter_junit_jupiter_params",
+        "@maven//:org_slf4j_slf4j_api",
+    ],
+)
+
+jvm_junit_test_suite(
+    name = "server-tests",
+    srcs = glob(["src/test/**/*.java"]),
+    per_test_args = per_test_args,
+    tags = ["no-java-spotbugs"],
+    visibility = ["//visibility:public"],
+    runtime_deps = [
+        "@maven//:org_junit_jupiter_junit_jupiter_engine",
+        "@maven//:org_junit_platform_junit_platform_launcher",
+        "@maven//:org_junit_platform_junit_platform_reporting",
+    ],
+    deps = [
+        ":server",
+        "//clients",
+        "//clients:clients-tests-test-lib",
+        "//dependencies:mockito_core",
+        "//metadata",
+        "//server-common",
+        "@maven//:com_yammer_metrics_metrics_core",
+        "@maven//:org_junit_jupiter_junit_jupiter_api",
+        "@maven//:org_junit_jupiter_junit_jupiter_params",
+        "@maven//:org_slf4j_slf4j_api",
+    ],
+)

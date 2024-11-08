@@ -1,0 +1,158 @@
+load("@apple_rules_lint//lint:defs.bzl", "package_lint_config")
+load("@contrib_rules_jvm//java:defs.bzl", "java_binary")
+load("@scala_multiverse//:cross_scala_config.bzl", "maven_dep")
+load("//tools-bazel:library_wrappers.bzl", "java_library")
+
+package_lint_config({
+    "java-checkstyle": "//checkstyle:checkstyle_config_jmh_benchmarks",
+})
+
+java_library(
+    name = "jmh-benchmarks",
+    testonly = True,
+    srcs = glob(["src/main/**/*.java"]),
+    javacopts = [
+        "-Xlint:-cast",
+    ],
+    visibility = ["//:__subpackages__"],
+    deps = [
+        "//clients",
+        "//clients:clients-tests-test-lib",
+        "//core",
+        "//core:scala-server-utils-test-utils",
+        "//dependencies:mockito_core",
+        "//group-coordinator",
+        "//group-coordinator/group-coordinator-api",
+        "//metadata",
+        "//raft",
+        "//server",
+        "//server-common",
+        "//server-common:server-common-tests-test-lib",
+        "//storage",
+        "//streams",
+        "//transaction-coordinator:transaction-coordinator-project",
+        "@io_bazel_rules_scala_scala_library//jar",
+        "@maven//:com_fasterxml_jackson_core_jackson_databind",
+        "@maven//:com_fasterxml_jackson_module_jackson_module_afterburner",
+        "@maven//:com_yammer_metrics_metrics_core",
+        "@maven//:io_cloudevents_cloudevents_api",
+        "@maven//:io_cloudevents_cloudevents_core",
+        "@maven//:io_cloudevents_cloudevents_json_jackson",
+        "@maven//:io_cloudevents_cloudevents_kafka",
+        "@maven//:io_opentelemetry_opentelemetry_api",
+        "@maven//:io_opentelemetry_opentelemetry_context",
+        "@maven//:org_openjdk_jmh_jmh_core",
+        "@maven//:org_slf4j_slf4j_api",
+        maven_dep("org.scala-lang.modules::scala-java8-compat"),
+        "//connect/api",
+        "//connect/json",
+        "//connect/transforms",
+    ],
+)
+
+# The gradle build was excluding jdk18on from the dependency on ce-broker-plugins
+java_binary(
+    name = "exclusions",
+    main_class = "none",
+    visibility = ["//visibility:public"],
+    runtime_deps = ["@maven//:org_bouncycastle_bcpkix_jdk18on"],
+)
+
+java_binary(
+    name = "CachedCrnStringPatternMatcherBenchmark",
+    testonly = True,
+    deploy_env = [":exclusions"],
+    main_class = "org.apache.kafka.jmh.audit.CachedCrnStringPatternMatcherBenchmark",
+    visibility = ["//visibility:public"],
+    runtime_deps = [":jmh-benchmarks"],
+)
+
+java_binary(
+    name = "CrnPatternMatcherBenchmark",
+    testonly = True,
+    deploy_env = [":exclusions"],
+    main_class = "org.apache.kafka.jmh.audit.CrnPatternMatcherBenchmark",
+    visibility = ["//visibility:public"],
+    runtime_deps = [":jmh-benchmarks"],
+)
+
+java_binary(
+    name = "MultiTenantProviderAuthenticationEventBenchmark",
+    testonly = True,
+    deploy_env = [":exclusions"],
+    main_class = "org.apache.kafka.jmh.audit.MultiTenantProviderAuthenticationEventBenchmark",
+    visibility = ["//visibility:public"],
+    runtime_deps = [":jmh-benchmarks"],
+)
+
+java_binary(
+    name = "MultiTenantProviderLogAuthorizationBenchmark",
+    testonly = True,
+    deploy_env = [":exclusions"],
+    main_class = "org.apache.kafka.jmh.audit.MultiTenantProviderLogAuthorizationBenchmark",
+    visibility = ["//visibility:public"],
+    runtime_deps = [":jmh-benchmarks"],
+)
+
+java_binary(
+    name = "ProviderAuthenticationEventBenchmark",
+    testonly = True,
+    deploy_env = [":exclusions"],
+    main_class = "org.apache.kafka.jmh.audit.ProviderAuthenticationEventBenchmark",
+    visibility = ["//visibility:public"],
+    runtime_deps = [":jmh-benchmarks"],
+)
+
+java_binary(
+    name = "ProviderLogAuthorizationBenchmark",
+    testonly = True,
+    deploy_env = [":exclusions"],
+    main_class = "org.apache.kafka.jmh.audit.ProviderLogAuthorizationBenchmark",
+    visibility = ["//visibility:public"],
+    runtime_deps = [":jmh-benchmarks"],
+)
+
+java_binary(
+    name = "LRUCacheBenchmark",
+    testonly = True,
+    deploy_env = [":exclusions"],
+    main_class = "org.apache.kafka.jmh.cache.LRUCacheBenchmark",
+    visibility = ["//visibility:public"],
+    runtime_deps = [":jmh-benchmarks"],
+)
+
+java_binary(
+    name = "ConfluentProviderBenchmark",
+    testonly = True,
+    deploy_env = [":exclusions"],
+    main_class = "org.apache.kafka.jmh.rbac.ConfluentProviderBenchmark",
+    visibility = ["//visibility:public"],
+    runtime_deps = [":jmh-benchmarks"],
+)
+
+java_binary(
+    name = "DedicatedDataPlaneProviderBenchmark",
+    testonly = True,
+    deploy_env = [":exclusions"],
+    main_class = "org.apache.kafka.jmh.rbac.DedicatedDataPlaneProviderBenchmark",
+    visibility = ["//visibility:public"],
+    runtime_deps = [":jmh-benchmarks"],
+)
+
+java_binary(
+    name = "MultiTenantDataPlaneProviderBenchmark",
+    testonly = True,
+    deploy_env = [":exclusions"],
+    main_class = "org.apache.kafka.jmh.rbac.MultiTenantDataPlaneProviderBenchmark",
+    visibility = ["//visibility:public"],
+    runtime_deps = [":jmh-benchmarks"],
+)
+
+java_binary(
+    name = "ByteUtilsBenchmark",
+    testonly = True,
+    deploy_env = [":exclusions"],
+    main_class = "org.apache.kafka.jmh.util.ByteUtilsBenchmark",
+    visibility = ["//visibility:public"],
+    runtime_deps = [":jmh-benchmarks"],
+)

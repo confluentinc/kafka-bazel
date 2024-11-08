@@ -1,0 +1,189 @@
+load("@contrib_rules_jvm//java:defs.bzl", "java_binary")
+load("//tools-bazel:copy_system_test_jars.bzl", "conditional_copy_dep_jars")
+load("//tools-bazel:library_wrappers.bzl", "java_export", "java_library", "jvm_junit_test_suite")
+load(":generated_test_args.bzl", "per_test_args")
+
+java_export(
+    name = "mirror",
+    srcs = glob(["src/main/**/*.java"]),
+    classifier_artifacts = {
+        "test": ":mirror-test-jar",
+    },
+    maven_coordinates = "org.apache.kafka:connect-mirror:$(maven_version)",
+    resources = glob(["src/main/resources/**"]),
+    tags = ["no-javadocs"],
+    visibility = ["//:__subpackages__"],
+    deps = [
+        "//clients",
+        "//connect/api",
+        "//connect/json",
+        "//connect/mirror-client",
+        "//connect/runtime",
+        "@maven//:ch_qos_reload4j_reload4j",
+        "@maven//:com_fasterxml_jackson_core_jackson_annotations",
+        "@maven//:com_fasterxml_jackson_jaxrs_jackson_jaxrs_json_provider",
+        "@maven//:io_swagger_core_v3_swagger_annotations",
+        "@maven//:jakarta_activation_jakarta_activation_api",
+        "@maven//:jakarta_ws_rs_jakarta_ws_rs_api",
+        "@maven//:jakarta_xml_bind_jakarta_xml_bind_api",
+        "@maven//:net_sourceforge_argparse4j_argparse4j",
+        "@maven//:org_eclipse_jetty_jetty_client",
+        "@maven//:org_eclipse_jetty_jetty_server",
+        "@maven//:org_eclipse_jetty_jetty_servlet",
+        "@maven//:org_eclipse_jetty_jetty_servlets",
+        "@maven//:org_glassfish_hk2_external_jakarta_inject",
+        "@maven//:org_glassfish_hk2_hk2_api",
+        "@maven//:org_glassfish_jersey_containers_jersey_container_servlet",
+        "@maven//:org_glassfish_jersey_core_jersey_server",
+        "@maven//:org_glassfish_jersey_inject_jersey_hk2",
+        "@maven//:org_slf4j_slf4j_api",
+    ],
+)
+
+java_library(
+    name = "mirror-test-jar",
+    srcs = glob(["src/test/java/**/*.java"]),
+    resources = glob(["src/test/resources/**/*"]),
+    tags = [
+        "no-java-checkstyle",
+        "no-java-spotbugs",
+    ],
+    deps = [
+        ":mirror",
+        ":mirror-tests-test-lib",
+        "//clients",
+        "//clients:clients-tests-test-lib",
+        "//connect/api",
+        "//connect/mirror-client",
+        "//connect/runtime",
+        "//connect/runtime:runtime-tests-test-lib",
+        "//core",
+        "//dependencies:mockito_core",
+        "//server:server-project",
+        "@maven//:ch_qos_reload4j_reload4j",
+        "@maven//:io_dropwizard_metrics_metrics_core",
+        "@maven//:org_apache_sshd_sshd_common",
+        "@maven//:org_hibernate_orm_hibernate_core",
+        "@maven//:org_junit_jupiter_junit_jupiter_api",
+        "@maven//:org_slf4j_slf4j_api",
+    ],
+)
+
+conditional_copy_dep_jars(
+    name = "copy-connect-mirror-dep-jars",
+    libs_target = ":mirror",
+    libs_target_exclude_list = [
+        "//clients",
+        "@maven//:org_bouncycastle_bcpkix_jdk18on",
+        "@maven//:org_bouncycastle_bcprov_jdk18on",
+        "@maven//:org_bouncycastle_bcutil_jdk18on",
+        "@maven//:org_bouncycastle_bc_fips",
+        "//connect/api",
+        "//connect/json",
+        "//connect/mirror-client",
+        "//connect/runtime",
+        "//connect/ce-logs",
+        "//connect/transforms",
+    ],
+    output_directory = "dependant-libs",
+    testlibs_target = [":mirror-test-jar"],
+    testlibs_target_exclude_list = [
+        "@maven//:org_bouncycastle_bcpkix_jdk18on",
+        "@maven//:org_bouncycastle_bcprov_jdk18on",
+        "@maven//:org_bouncycastle_bcutil_jdk18on",
+        "@maven//:org_bouncycastle_bc_fips",
+    ],
+    testlibs_target_include_list = [
+        "@maven//:ch_qos_reload4j_reload4j",
+    ],
+)
+
+java_binary(
+    name = "MirrorCheckpointConfig",
+    main_class = "org.apache.kafka.connect.mirror.MirrorCheckpointConfig",
+    visibility = ["//visibility:public"],
+    runtime_deps = [
+        ":mirror",
+        "@maven//:org_slf4j_slf4j_nop",
+    ],
+)
+
+java_binary(
+    name = "MirrorConnectorConfig",
+    main_class = "org.apache.kafka.connect.mirror.MirrorConnectorConfig",
+    visibility = ["//visibility:public"],
+    runtime_deps = [
+        ":mirror",
+        "@maven//:org_slf4j_slf4j_nop",
+    ],
+)
+
+java_binary(
+    name = "MirrorHeartbeatConfig",
+    main_class = "org.apache.kafka.connect.mirror.MirrorHeartbeatConfig",
+    visibility = ["//visibility:public"],
+    runtime_deps = [
+        ":mirror",
+        "@maven//:org_slf4j_slf4j_nop",
+    ],
+)
+
+java_binary(
+    name = "MirrorMaker",
+    main_class = "org.apache.kafka.connect.mirror.MirrorMaker",
+    visibility = ["//visibility:public"],
+    runtime_deps = [
+        ":mirror",
+        "@maven//:org_slf4j_slf4j_nop",
+    ],
+)
+
+java_binary(
+    name = "MirrorSourceConfig",
+    main_class = "org.apache.kafka.connect.mirror.MirrorSourceConfig",
+    visibility = ["//visibility:public"],
+    runtime_deps = [
+        ":mirror",
+        "@maven//:org_slf4j_slf4j_nop",
+    ],
+)
+
+jvm_junit_test_suite(
+    name = "mirror-tests",
+    srcs = glob(
+        ["src/test/**/*.java"],
+    ),
+    additional_library_srcs = [
+        "src/test/java/org/apache/kafka/connect/mirror/OffsetSyncStoreTest.java",
+        "src/test/java/org/apache/kafka/connect/mirror/integration/MirrorConnectorsIntegrationBaseTest.java",
+    ],
+    per_test_args = per_test_args,
+    resources = glob(["src/test/resources/**/*"]),
+    tags = ["no-java-spotbugs"],
+    visibility = ["//visibility:public"],
+    runtime_deps = [
+        "@maven//:org_bouncycastle_bcpkix_jdk18on",
+        "@maven//:org_junit_jupiter_junit_jupiter_engine",
+        "@maven//:org_junit_platform_junit_platform_launcher",
+        "@maven//:org_junit_platform_junit_platform_reporting",
+        "@maven//:org_slf4j_slf4j_reload4j",
+    ],
+    deps = [
+        ":mirror",
+        "//clients",
+        "//clients:clients-tests-test-lib",
+        "//connect/api",
+        "//connect/mirror-client",
+        "//connect/runtime",
+        "//connect/runtime:runtime-tests-test-lib",
+        "//core",
+        "//dependencies:mockito_core",
+        "//server:server-project",
+        "@maven//:ch_qos_reload4j_reload4j",
+        "@maven//:io_dropwizard_metrics_metrics_core",
+        "@maven//:org_apache_sshd_sshd_common",
+        "@maven//:org_hibernate_orm_hibernate_core",
+        "@maven//:org_junit_jupiter_junit_jupiter_api",
+        "@maven//:org_slf4j_slf4j_api",
+    ],
+)

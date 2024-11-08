@@ -1,0 +1,7 @@
+exports_files([
+    "bazel_tag_reader.py",
+    "pin_maven_deps.sh",
+    "pom.tpl",
+    "pom_clients.tpl",
+    "message_generator.sh",
+])

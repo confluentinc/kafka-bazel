@@ -1,0 +1,12 @@
+#http_archive(
+#    name = "io_bazel_rules_scala",
+#    sha256 = "9a23058a36183a556a9ba7229b4f204d3e68c8c6eb7b28260521016b38ef4e00",
+#    strip_prefix = "rules_scala-6.4.0",
+#    url = "https://github.com/bazelbuild/rules_scala/releases/download/v6.4.0/rules_scala-v6.4.0.tar.gz",
+#)
+
+git_repository(
+    name = "io_bazel_rules_scala",
+    commit = "8f7fc6d21249415f45f80ad498641461e4777767",
+    remote = "https://github.com/confluentinc/rules_scala.git",
+)

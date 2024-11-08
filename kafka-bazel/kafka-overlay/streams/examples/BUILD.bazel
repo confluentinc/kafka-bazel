@@ -1,0 +1,119 @@
+load("@contrib_rules_jvm//java:defs.bzl", "java_binary")
+load("//tools-bazel:copy_system_test_jars.bzl", "conditional_copy_dep_jars")
+load("//tools-bazel:library_wrappers.bzl", "java_export", "java_library", "jvm_junit_test_suite")
+load(":generated_test_args.bzl", "per_test_args")
+
+java_export(
+    name = "examples",
+    srcs = glob(["src/main/**/*.java"]),
+    classifier_artifacts = {
+        "test": ":examples-test-jar",
+    },
+    exclusions = {
+        "//connect/json": ["*:javax.ws.rs-api"],
+    },
+    maven_coordinates = "org.apache.kafka:kafka-streams-examples:$(maven_version)",
+    tags = ["no-javadocs"],
+    visibility = ["//:__subpackages__"],
+    deps = [
+        "//clients",
+        "//connect/json",
+        "//streams",
+        "@maven//:com_fasterxml_jackson_core_jackson_annotations",
+        "@maven//:com_fasterxml_jackson_core_jackson_databind",
+        "@maven//:org_slf4j_slf4j_reload4j",
+    ],
+)
+
+java_library(
+    name = "examples-test-jar",
+    srcs = glob(["src/test/java/**/*.java"]),
+    resources = glob(["src/test/resources/**/*"]),
+    deps = [
+        ":examples",
+        "//clients",
+        "//clients:clients-tests-test-lib",
+        "//streams",
+        "//streams/test-utils",
+        "@maven//:org_hamcrest_hamcrest",
+        "@maven//:org_junit_jupiter_junit_jupiter_api",
+    ],
+)
+
+conditional_copy_dep_jars(
+    name = "copy-streams-examples-dep-jars",
+    include_scala_version = True,
+    libs_target = ":examples",
+    libs_target_exclude_list = ["//streams"],
+    output_directory = "dependant-libs",
+)
+
+java_binary(
+    name = "PageViewTypedDemo",
+    main_class = "org.apache.kafka.streams.examples.pageview.PageViewTypedDemo",
+    visibility = ["//visibility:public"],
+    runtime_deps = [":examples"],
+)
+
+java_binary(
+    name = "PageViewUntypedDemo",
+    main_class = "org.apache.kafka.streams.examples.pageview.PageViewUntypedDemo",
+    visibility = ["//visibility:public"],
+    runtime_deps = [":examples"],
+)
+
+java_binary(
+    name = "PipeDemo",
+    main_class = "org.apache.kafka.streams.examples.pipe.PipeDemo",
+    visibility = ["//visibility:public"],
+    runtime_deps = [":examples"],
+)
+
+java_binary(
+    name = "TemperatureDemo",
+    main_class = "org.apache.kafka.streams.examples.temperature.TemperatureDemo",
+    visibility = ["//visibility:public"],
+    runtime_deps = [":examples"],
+)
+
+java_binary(
+    name = "WordCountDemo",
+    main_class = "org.apache.kafka.streams.examples.wordcount.WordCountDemo",
+    visibility = ["//visibility:public"],
+    runtime_deps = [":examples"],
+)
+
+java_binary(
+    name = "WordCountProcessorDemo",
+    main_class = "org.apache.kafka.streams.examples.wordcount.WordCountProcessorDemo",
+    visibility = ["//visibility:public"],
+    runtime_deps = [":examples"],
+)
+
+java_binary(
+    name = "WordCountTransformerDemo",
+    main_class = "org.apache.kafka.streams.examples.wordcount.WordCountTransformerDemo",
+    visibility = ["//visibility:public"],
+    runtime_deps = [":examples"],
+)
+
+jvm_junit_test_suite(
+    name = "examples-tests",
+    srcs = glob(["src/test/**/*.java"]),
+    per_test_args = per_test_args,
+    runtime_deps = [
+        "@maven//:org_junit_jupiter_junit_jupiter_engine",
+        "@maven//:org_junit_platform_junit_platform_launcher",
+        "@maven//:org_junit_platform_junit_platform_reporting",
+    ],
+    deps = [
+        ":examples",
+        "//clients",
+        "//clients:clients-tests-test-lib",
+        "//streams",
+        "//streams:streams-tests-test-lib",
+        "//streams/test-utils",
+        "@maven//:org_hamcrest_hamcrest",
+        "@maven//:org_junit_jupiter_junit_jupiter_api",
+    ],
+)

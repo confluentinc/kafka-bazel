@@ -1,0 +1,19 @@
+load("@apple_rules_lint//lint:defs.bzl", "package_lint_config")
+load("//tools-bazel:library_wrappers.bzl", "java_export", "java_library", "jvm_junit_test_suite")
+load(":generated_test_args.bzl", "per_test_args")
+
+package_lint_config({
+    "java-checkstyle": "//checkstyle:checkstyle_config_group_coordinator",
+})
+
+java_export(
+    name = "group-coordinator-api",
+    srcs = glob(["src/main/**/*.java"]),
+    maven_coordinates = "org.apache.kafka:kafka-group-coordinator-api:$(maven_version)",
+    neverlink_option = True,
+    resources = ["//:version_file"],
+    visibility = ["//:__subpackages__"],
+    deps = [
+        "//clients",
+    ],
+)

@@ -1,0 +1,106 @@
+load("@apple_rules_lint//lint:defs.bzl", "package_lint_config")
+load("@scala_multiverse//:cross_scala_config.bzl", "BASE_SCALA_VERSION", "maven_dep")
+load("//tools-bazel:copy_system_test_jars.bzl", "conditional_copy_dep_jars")
+load("//tools-bazel:library_wrappers.bzl", "java_library", "jvm_junit_test_suite", "scala_export", "scala_library")
+load(":generated_test_args.bzl", "per_test_args")
+
+package_lint_config({
+    "scalafmt": "//checkstyle:scalafmt_config",
+    "java-checkstyle": "//checkstyle:checkstyle_config",
+})
+
+scala_export(
+    name = "streams-scala",
+    srcs = glob(["src/main/scala/**/*.scala"]),
+    classifier_artifacts = {
+        "test": ":streams-scala-test-jar",
+    },
+    maven_coordinates = "org.apache.kafka:kafka-streams-scala_%s:$(maven_version)" % BASE_SCALA_VERSION,
+    runtime_deps_exclude = [
+        "//clients",
+        "//streams",
+        "@io_bazel_rules_scala_scala_library//jar",
+    ],
+    tags = ["no-javadocs"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//clients",
+        "//dependencies:scala_collection_compat",
+        "//streams",
+        "@io_bazel_rules_scala_scala_library//jar",
+    ],
+)
+
+scala_library(
+    name = "streams-scala-test-jar",
+    srcs = glob(["src/test/scala/**/*.scala"]),
+    resources = glob(["src/test/resources/**/*"]),
+    tags = [
+        "no-java-checkstyle",
+        "no-java-spotbugs",
+    ],
+    deps = [
+        ":streams-scala",
+        ":streams-scala-tests-test-lib",
+        "//clients",
+        "//clients:clients-tests-test-lib",
+        "//dependencies:mockito_core",
+        "//dependencies:mockito_junit_jupiter",
+        "//dependencies:scala_collection_compat",
+        "//server-common:server-common-tests-test-lib",
+        "//streams",
+        "//streams:streams-tests-test-lib",
+        "//streams/test-utils",
+        "@io_bazel_rules_scala_scala_library//jar",
+        "@maven//:org_junit_jupiter_junit_jupiter",
+        "@maven//:org_junit_jupiter_junit_jupiter_api",
+        "@maven//:org_powermock_powermock_api_easymock",
+        "@maven//:org_powermock_powermock_core",
+    ],
+)
+
+conditional_copy_dep_jars(
+    name = "copy-streams-scala-dep-jars",
+    include_scala_version = True,
+    libs_target = ":streams-scala",
+    libs_target_exclude_list = ["//streams"],
+    output_directory = "dependant-libs",
+)
+
+jvm_junit_test_suite(
+    name = "streams-scala-tests",
+    srcs = glob(
+        ["src/test/scala/**/*.scala"],
+    ),
+    per_test_args = per_test_args,
+    prefixes = [
+        "src/test/scala/",
+    ],
+    tags = ["no-java-spotbugs"],
+    runtime_deps = [
+        "//core:scala-server-utils-test-utils",
+        "@maven//:io_dropwizard_metrics_metrics_core",
+        "@maven//:org_bouncycastle_bcpkix_jdk18on",
+        "@maven//:org_junit_jupiter_junit_jupiter_engine",
+        "@maven//:org_junit_platform_junit_platform_launcher",
+        "@maven//:org_junit_platform_junit_platform_reporting",
+        "@maven//:org_slf4j_slf4j_reload4j",
+    ],
+    deps = [
+        ":streams-scala",
+        "//clients",
+        "//clients:clients-tests-test-lib",
+        "//dependencies:mockito_core",
+        "//dependencies:mockito_junit_jupiter",
+        "//dependencies:scala_collection_compat",
+        "//server-common:server-common-tests-test-lib",
+        "//streams",
+        "//streams:streams-tests-test-lib",
+        "//streams/test-utils",
+        "@io_bazel_rules_scala_scala_library//jar",
+        "@maven//:org_junit_jupiter_junit_jupiter",
+        "@maven//:org_junit_jupiter_junit_jupiter_api",
+        "@maven//:org_powermock_powermock_api_easymock",
+        "@maven//:org_powermock_powermock_core",
+    ],
+)

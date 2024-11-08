@@ -1,0 +1,514 @@
+# copybara ./copy.bara.sky --folder-dir $(pwd) \
+#                          --buildozer-bin /opt/homebrew/bin/buildozer \
+#                          --buildifier-bin /opt/homebrew/bin/buildifier
+load("helpers", "buildozer_modify", "remove_dependencies", "strip_all_proprietary", "insert_before", "multiple_simple_replacements")
+
+core.workflow(
+    name = "default",
+    origin = git.github_origin(
+        url = "https://github.com/confluentinc/ce-kafka",
+        ref = "bazel-overlay",
+    ),
+    authoring = authoring.pass_thru(default = "No Reply <noreply@confluent.io>"),
+    destination = folder.destination(),
+    # FIXME: Rather than always ** glob, we should be more specific
+    origin_files = glob([
+        "WORKSPACE.bazel",
+        "BUILD.bazel",
+        "bin/BUILD.bazel",
+        "checkstyle/BUILD.bazel",
+        "checkstyle/*.bzl",
+        "checkstyle/update_checkstyle_bazel.sh",
+        "config/BUILD.bazel",
+        "connect/**/BUILD.bazel",
+        "connect/**/*.bzl",
+        "connect/runtime/openapi-config.yaml",
+        "core/src/test/java/kafka/test/JarResourceLoader.java",
+        "core/BUILD.bazel",
+        "core/*.bzl",
+        "clients/BUILD.bazel",
+        "clients/*.bzl",
+        "generator/BUILD.bazel",
+        "generator/*.bzl",
+        "gradle/BUILD.bazel",
+        "group-coordinator/BUILD.bazel",
+        "group-coordinator/*.bzl",
+        "group-coordinator/group-coordinator-api/BUILD.bazel",
+        "group-coordinator/group-coordinator-api/*.bzl",
+        "jmh-benchmarks/BUILD.bazel",
+        "licenses/BUILD.bazel",
+        "log4j-appender/BUILD.bazel",
+        "log4j-appender/*.bzl",
+        "metadata/BUILD.bazel",
+        "metadata/*.bzl",
+        "raft/BUILD.bazel",
+        "raft/*.bzl",
+        "server-common/BUILD.bazel",
+        "server-common/*.bzl",
+        "server/BUILD.bazel",
+        "server/*.bzl",
+        "storage/BUILD.bazel",
+        "storage/*.bzl",
+        "storage/api/BUILD.bazel",
+        "storage/api/*.bzl",
+        "streams/BUILD.bazel",
+        "streams/*.bzl",
+        "streams/**/BUILD.bazel",
+        "streams/**/*.bzl",
+        "shell/BUILD.bazel",
+        "shell/*.bzl",
+        "transaction-coordinator/BUILD.bazel",
+        "transaction-coordinator/*.bzl",
+        "trogdor/BUILD.bazel",
+        "trogdor/*.bzl",
+        "tools/BUILD.bazel",
+        "tools/*.bzl",
+        "tools/tools-api/BUILD.bazel",
+        "tools/tools-api/*.bzl",
+        "tools-bazel/**",
+        "dependencies/**",
+        "scala_tools/**",
+        "toolchains/**",
+        # This isn't in AK. It might be specific to Confluent Docker images.
+        "include/BUILD.bazel",
+        ".bazelrc",
+        ".bazel/**",
+        ],
+        # Safe-guard to not include any proprietary files
+        exclude = [
+            "**/replication/**",
+            "**/connector-datapreview-extension/**",
+            "**/ce-*/**",
+            "**/cc-*/**",
+            "**/k2-*/**",
+            "tools-bazel/update_shard_count/**",
+            "tools-bazel/bazel_full_test_suite.yaml",
+        ],
+    ),
+    destination_files = glob(
+        [
+            "kafka-bazel/WORKSPACE.bazel",
+            "kafka-bazel/.bazelrc",
+            "kafka-bazel/.bazel/**",
+            "kafka-bazel/kafka-overlay/**",
+        ],
+        # Put here modules that may exist in Apache Kafka but have not yet been introduced into CE-Kafka
+        exclude = [
+            "kafka-bazel/.bazel/bazelrc/ci.bazelrc",
+            "kafka-bazel/kafka-overlay/coordinator-common/**",
+            "kafka-bazel/kafka-overlay/share/**",
+            "kafka-bazel/kafka-overlay/rules/**",
+        ]
+    ),
+    transformations = [
+        core.move(
+                "",
+                "kafka-bazel/kafka-overlay",
+                glob(["**"],
+                    exclude = [
+                        "WORKSPACE.bazel",
+                        ".bazelrc",
+                        ".bazel/**",
+                    ]
+                )),
+
+        # Anything from the exclude needs to be copied out explicitly into the top level
+        # kafka-bazel. These are files that don't need to be in the kafka-overlay
+        # directory
+        core.move("WORKSPACE.bazel", "kafka-bazel/WORKSPACE.bazel"),
+        core.move(".bazel", "kafka-bazel/.bazel"),
+        core.move(".bazelrc", "kafka-bazel/.bazelrc"),
+        
+        # bazelrc needs to exist in kafka-overlay for @kafka//:update_bazelrc_ci to run.
+        core.copy("kafka-bazel/.bazelrc", "kafka-bazel/kafka-overlay/.bazelrc"),
+
+        core.replace(
+            before = "${x}",
+            after = "(broken link)",
+            regex_groups = {
+                "x": "confluentinc\\.atlassian\\.net/[-/_#a-zA-Z0-9?]*(.md|)",
+            },
+            ignore = [".*bazelbuild/rules_go/.*"],
+        ),
+
+        # Edits to the BUILD files to remove proprietary dependencies
+        # these are changes that can happen to all BUILD files
+        remove_dependencies(
+            target = "kafka-bazel/kafka-overlay/...:*",
+            dependencies = [
+                ":scala-integration-kafka-log-test-lib",
+                "//ce-audit",
+                "//ce-auth-metadata",
+                "//ce-auth-providers:ce-auth-providers-tests-test-lib",
+                "//ce-auth-providers",
+                "//ce-broker-plugins:ce-broker-plugins-tests-test-lib",
+                "//ce-broker-plugins",
+                "//ce-events-api",
+                "//ce-events",
+                "//ce-metrics",
+                "//ce-rbac",
+                "//ce-resource-names",
+                "//ce-sbk:ce-sbk-tests-test-lib",
+                "//ce-sbk",
+                # These Scala dependencies were deleted in Core
+            ]
+        ),
+        buildozer_modify(
+            {
+                "kafka-bazel/kafka-overlay/...:*": [
+                    'remove deps //ce-authorizer',
+                    'remove deps //conflux-java8',
+                    'remove deps //connect/ce-logs',
+                    'remove deps //core/src/main/proto:core_java_grpc',
+                    'remove deps //core/src/main/proto:core_java_proto',
+                    'remove deps //internal-rest-server',
+                    'remove deps //k2-kafka-java8',
+                    'remove deps //replication',
+                    'remove deps //storage/src/main/resources/serde:checksum_store_java_fbs',
+                    'remove deps //storage/src/main/resources/serde:core_java_fbs',
+                    'remove resources //:COPYRIGHT',
+                    'remove resources //storage/src/main/resources/serde:all_fbs',
+                    'remove srcs //:COPYRIGHT',
+                    'remove srcs COPYRIGHT',
+                ],
+                # Clients module
+                "kafka-bazel/kafka-overlay/clients:clients-tests" : [
+                    'add additional_library_srcs src/test/java/org/apache/kafka/clients/consumer/internals/ShareCompletedFetchTest.java',
+                    'remove additional_library_srcs src/test/java/io/confluent/kafka/http/server/KafkaHttpServerLoaderTest.java',
+                    'remove additional_library_srcs src/test/java/org/apache/kafka/common/network/AbstractProxyProtocolEngineTest.java',
+                    'remove additional_library_srcs src/test/java/org/apache/kafka/common/security/ssl/NettySslFactoryTest.java',
+                    'remove additional_library_srcs src/test/java/org/apache/kafka/server/link/ClusterLinkSourceMetricsTest.java',
+                    'remove additional_library_srcs src/test/java/org/apache/kafka/test/IntegrationTest.java',
+                ],
+                "kafka-bazel/kafka-overlay/checkstyle:%checkstyle_config_wrapped": [
+                    'set java_header "java.header"',
+                ],
+                # Core module
+                "kafka-bazel/kafka-overlay/core:scala-unit-kafka-tools": [
+                    'remove additional_library_srcs src/test/scala/unit/kafka/tools/RestoreTierPartitionStateTest.scala',
+                ],
+                "kafka-bazel/kafka-overlay/core:core-test-jar-scala": [
+                    'add deps //coordinator-common',
+                    'add deps //share',
+                ],
+                # Raft module
+                "kafka-bazel/kafka-overlay/raft:raft-test-jar": [
+                    'add deps @maven//:org_hamcrest_hamcrest'
+                ],
+                "kafka-bazel/kafka-overlay/raft:raft-tests": [
+                    'add additional_library_srcs src/test/java/org/apache/kafka/raft/KafkaRaftClientTest.java',
+                    'remove additional_library_srcs src/test/java/org/apache/kafka/raft/internals/VoterSetTest.java',
+                    'add additional_library_srcs src/test/java/org/apache/kafka/raft/VoterSetTest.java',
+                    'add deps @maven//:org_hamcrest_hamcrest',
+                ],
+                # Metadata module
+                "kafka-bazel/kafka-overlay/metadata:metadata-tests": [
+                    'remove additional_library_srcs src/test/java/org/apache/kafka/image/BrokerReplicaExclusionsImageTest.java',
+                    'remove additional_library_srcs src/test/java/org/apache/kafka/image/ClusterLinksImageTest.java',
+                    'remove additional_library_srcs src/test/java/org/apache/kafka/metadata/MetadataEncryptorFactoryTest.java',
+                    'add additional_library_srcs src/test/java/org/apache/kafka/metadata/authorizer/StandardAclTest.java',
+                    'add additional_library_srcs src/test/java/org/apache/kafka/metadata/authorizer/StandardAclWithIdTest.java',
+                    'add additional_library_srcs src/test/java/org/apache/kafka/metadata/storage/ScramParserTest.java',
+                ],
+                # Group coordinator module
+                "kafka-bazel/kafka-overlay/group-coordinator:group-coordinator": [
+                    'add deps //coordinator-common',
+                    'add deps @maven//:org_hdrhistogram_HdrHistogram',
+                ],
+                "kafka-bazel/kafka-overlay/group-coordinator:group-coordinator-tests": [
+                    'add additional_library_srcs src/test/java/org/apache/kafka/coordinator/group/GroupConfigManagerTest.java',
+                    'remove additional_library_srcs src/test/java/org/apache/kafka/coordinator/group/CoordinatorRecordHelpersTest.java',
+                    'remove additional_library_srcs src/test/java/org/apache/kafka/coordinator/group/runtime/CoordinatorRuntimeTest.java',
+                    'add additional_library_srcs src/test/java/org/apache/kafka/coordinator/group/GroupCoordinatorRecordHelpersTest.java',
+                    'add deps //coordinator-common',
+                    'add deps //coordinator-common:coordinator-common-tests-test-lib',
+                ],
+                "kafka-bazel/kafka-overlay/group-coordinator:group-coordinator-test-jar": [
+                    'add deps //coordinator-common',
+                    'add deps //coordinator-common:coordinator-common-tests-test-lib',
+                ],
+                # Server module
+                "kafka-bazel/kafka-overlay/server:server": [
+                    "add deps //metadata",
+                ],
+                "kafka-bazel/kafka-overlay/server:server-tests": [
+                    "add deps //metadata",
+                ],
+            }
+        ),
+        strip_all_proprietary(),
+        multiple_simple_replacements(replacements = {
+            "//checkstyle": "@kafka//checkstyle",
+            "//dependencies": "@kafka//dependencies",
+            "//gradle": "@kafka//gradle",
+            "//toolchains": "@kafka//toolchains",
+            "//tools-bazel": "@kafka//tools-bazel",
+            "scala_tools/local_repos": "kafka-overlay/scala_tools/local_repos",
+        }, paths = glob(["kafka-bazel/WORKSPACE.bazel"])),
+        # FIXME: .bazelrc has the local_repos path as well which conflicts
+        # with what is set in the WORKSPACE.bazel file. We should remove it.
+        core.replace(
+            before = "scala_tools/local_repos",
+            after = "kafka-overlay/scala_tools/local_repos",
+            multiline = False,
+            paths = glob(["kafka-bazel/.bazelrc"]),
+        ),
+        core.replace(
+            before = "\"//dependencies",
+            after = "\"@kafka//dependencies",
+            multiline = False,
+            paths = glob(["kafka-bazel/kafka-overlay/dependencies/dependencies.bzl"]),
+        ),
+        # FIXME: Using a hacky replace rather than buildozer since it does not seem to work with globs
+        core.replace(
+            before = 'glob(["src/test/**/*.java"])',
+            after = 'glob(["src/test/**/*.java"], exclude=["src/test/java/org/apache/kafka/raft/UnattachedStateWithVoteTest.java"])',
+            multiline = False,
+            paths = glob(["kafka-bazel/kafka-overlay/raft/BUILD.bazel"]),
+        ),
+        buildozer.modify(
+            target = "kafka-bazel/kafka-overlay/server:server-test-jar",
+            commands = [
+                # indirect dependency failure during bazel build for MetadataImage
+                buildozer.cmd("add deps //metadata")
+            ],
+        ),
+        buildozer.modify(
+            target = "kafka-bazel/kafka-overlay/storage:storage-tests",
+            commands = [
+                # indirect dependency failure during bazel build for MetadataImage
+                buildozer.cmd("add deps //transaction-coordinator")
+            ],
+        ),
+        buildozer.modify(
+            target = "kafka-bazel/kafka-overlay/storage:storage-test-jar",
+            commands = [
+                # indirect dependency failure during bazel build for MetadataImage
+                buildozer.cmd("add deps //transaction-coordinator")
+            ],
+        ),
+        buildozer.modify(
+            target = "kafka-bazel/kafka-overlay/core:core",
+            commands = [
+                # indirect dependency failure during bazel build for MetadataImage
+                buildozer.cmd("add deps //metadata"),
+                buildozer.cmd("add deps //coordinator-common"),
+                buildozer.cmd("add deps //share"),
+            ],
+        ),
+        buildozer.modify(
+            target = "kafka-bazel/kafka-overlay/core:core-test-jar-java",
+            commands = [
+                buildozer.cmd("add deps //share"),
+            ],
+        ),
+        buildozer.modify(
+            target = "kafka-bazel/kafka-overlay/core:kafka-server-share",
+            commands = [
+                buildozer.cmd("add deps //share"),
+            ],
+        ),
+        buildozer.modify(
+            target = "kafka-bazel/kafka-overlay/core:scala-server-utils",
+            commands = [
+                buildozer.cmd("add deps //share"),
+            ],
+        ),
+        buildozer.modify(
+            target = "kafka-bazel/kafka-overlay/core:scala-unit-kafka-tools",
+            commands = [
+                buildozer.cmd("add deps //coordinator-common"),
+            ],
+        ),
+        buildozer.modify(
+            target = "kafka-bazel/kafka-overlay/core:scala-unit-kafka-coordinator",
+            commands = [
+                buildozer.cmd("add deps //coordinator-common"),
+            ],
+        ),
+        # FIXME: Using a hacky replace rather than buildozer since it does not seem to work with globs
+        core.replace(
+            before = '"src/test/scala/kafka/tier/**/*.scala"',
+            after = '"src/test/scala/kafka/tier/**/*.scala", "src/test/java/kafka/security/**/*.java",',
+            multiline = False,
+            paths = glob(["kafka-bazel/kafka-overlay/core/BUILD.bazel"]),
+        ),
+        buildozer.modify(
+            target = "kafka-bazel/kafka-overlay/core:scala-unit-kafka-tools",
+            commands = [
+                buildozer.cmd("remove additional_library_srcs src/test/scala/unit/kafka/tools/RestoreTierPartitionStateTest.scala")
+            ],
+        ),
+        #All these below targets don't exist in Apache kafka
+        buildozer.delete(
+            target = "kafka-bazel/kafka-overlay/core:scala-unit-kafka-metrics",
+        ),
+        buildozer.delete(
+            target = "kafka-bazel/kafka-overlay/core:scala-integration-kafka-tier",
+        ),
+        buildozer.delete(
+            target = "kafka-bazel/kafka-overlay/core:scala-integration-kafka-link",
+        ),
+        buildozer.delete(
+            target = "kafka-bazel/kafka-overlay/core:scala-integration-kafka-log",
+        ),
+        buildozer.delete(
+            target = "kafka-bazel/kafka-overlay/core:scala-kafka-durability",
+        ),
+        buildozer.delete(
+            target = "kafka-bazel/kafka-overlay/core:kafka-restore",
+        ),
+
+        buildozer.modify(
+            target = "kafka-bazel/kafka-overlay/shell:shell-test-jar",
+            commands = [
+                buildozer.cmd("add deps //server-common:server-common-tests-test-lib"),
+            ],
+        ),
+        buildozer.modify(
+            target = "kafka-bazel/kafka-overlay/shell:shell-tests",
+            commands = [
+                buildozer.cmd("add deps //server-common:server-common-tests-test-lib"),
+            ],
+        ),
+        buildozer.modify(
+            target = "kafka-bazel/kafka-overlay/connect/runtime:runtime",
+            commands = [
+                buildozer.cmd("add deps @maven//:io_github_classgraph_classgraph"),
+            ],
+        ),
+        buildozer.modify(
+            target = "kafka-bazel/kafka-overlay/connect/runtime:runtime-tests",
+            commands = [
+                buildozer.cmd("add deps //core:core-test-jar-java"),
+                buildozer.cmd("add deps @maven//:org_junit_jupiter_junit_jupiter_params"),
+            ],
+        ),
+        buildozer.modify(
+            target = "kafka-bazel/kafka-overlay/connect/runtime:runtime-test-jar",
+            commands = [
+                buildozer.cmd("add deps @maven//:org_junit_jupiter_junit_jupiter_params"),
+                buildozer.cmd("add deps //core:kafka-testkit"),
+            ],
+        ),
+        buildozer.modify(
+            target = "kafka-bazel/kafka-overlay/connect/mirror:mirror-test-jar",
+            commands = [
+                buildozer.cmd("add deps @maven//:ch_qos_reload4j_reload4j"),
+            ],
+        ),
+        buildozer.modify(
+            target = "kafka-bazel/kafka-overlay/connect/mirror:mirror-tests",
+            commands = [
+                buildozer.cmd("add deps @maven//:ch_qos_reload4j_reload4j"),
+            ],
+        ),
+
+        buildozer.modify(
+            target = "kafka-bazel/kafka-overlay/tools:tools-test-jar",
+            commands = [
+                buildozer.cmd("add deps //storage:storage-tests-test-lib"),
+                buildozer.cmd("add deps //transaction-coordinator"),
+            ],
+        ),
+        buildozer.modify(
+            target = "kafka-bazel/kafka-overlay/tools:tools-tests",
+            commands = [
+                buildozer.cmd("add deps //storage:storage-tests-test-lib"),
+                buildozer.cmd("add deps //transaction-coordinator"),
+            ],
+        ),
+        buildozer.modify(
+            target = "kafka-bazel/kafka-overlay/tools:tools",
+            commands = [
+                buildozer.cmd("add deps //group-coordinator"),
+                buildozer.cmd("add deps //server"),
+                buildozer.cmd("add deps //transaction-coordinator")
+            ],
+        ),
+        buildozer.modify(
+            target = "kafka-bazel/kafka-overlay/streams:streams-tests",
+            commands = [
+                buildozer.cmd("add deps @maven//:org_junit_platform_junit_platform_suite_api"),
+                buildozer.cmd("add additional_library_srcs src/test/java/org/apache/kafka/streams/state/internals/AbstractRocksDBWindowStoreTest.java"),
+                buildozer.cmd("add additional_library_srcs src/test/java/org/apache/kafka/streams/processor/internals/RecordCollectorTest.java"),
+            ],
+        ),
+        buildozer.modify(
+            target = "kafka-bazel/kafka-overlay/streams:streams-test-jar",
+            commands = [
+                buildozer.cmd("add deps @maven//:org_junit_platform_junit_platform_suite_api"),
+            ],
+        ),
+        # Werror configuration:
+        # Apache Kafka does not use -Werror for Java when built with Scala toolchain.
+        buildozer.modify(
+            target = "kafka-bazel/kafka-overlay/toolchains:scala_java_toolchain",
+            commands = [
+                buildozer.cmd("remove package_configuration :werror"),
+            ],
+        ),
+        buildozer.modify(
+            target = "kafka-bazel/kafka-overlay/toolchains:werror_packages",
+            commands = [
+                buildozer.cmd("add packages -//core/..."),
+            ],
+        ),
+        buildozer.create(
+            target = "kafka-bazel/kafka-overlay/checkstyle:checkstyle_config_coordinator_common",
+            rule_type = "checkstyle_config_wrapped",
+            commands = [
+                buildozer.cmd("set checkstyle_binary \"//checkstyle:checkstyle_bin\""),
+                buildozer.cmd("set checkstyle_xml \"checkstyle.xml\""),
+                buildozer.cmd("set import_control_xml \"import-control-coordinator-common.xml\""),
+                buildozer.cmd("set java_header \"java.header\""),
+                buildozer.cmd("set suppressions_xml \"suppressions.xml\""),
+            ],
+        ),
+        # This is portions of commands to move from artifactory to maven2
+        buildozer.delete(
+            target = "kafka-bazel/kafka-overlay/dependencies:netty_tcnative_fips_boringssl_static_all",
+        ),
+        remove_dependencies(
+            target = "kafka-bazel/kafka-overlay/...:*",
+            dependencies = [
+                "@maven//:io_confluent_cloud_events_schema",
+                "@maven//:io_confluent_flink_apiserver_client_java",
+                "@maven//:io_confluent_cc_role_definitions",
+            ],
+        ),
+        buildozer.modify(
+            target = "kafka-bazel/kafka-overlay:jar_pkg",
+            commands = [
+                buildozer.cmd("remove targets_with_runtime_classpath //dependencies:netty_tcnative_fips_boringssl_static_all"),
+            ],
+        ),
+        multiple_simple_replacements(replacements = {
+            "https://confluent-519856050701.d.codeartifact.us-west-2.amazonaws.com/maven/maven/": "https://repo1.maven.org/maven2",
+        }, paths = glob(["kafka-bazel/WORKSPACE.bazel", "kafka-bazel/kafka-overlay/dependencies/dependencies.bzl"])),
+        # This portion is needed to remove confluent_rules
+            multiple_simple_replacements(replacements = {
+            "@confluent_rules//java:release_tar.bzl": "//rules/jvm:release_tar.bzl",
+            'load("@confluent_rules//scala:jvm_junit_test_suite.bzl", confluent_jvm_junit_test_suite = "jvm_junit_test_suite")': 'load("//rules/jvm:jvm_junit_test_suite.bzl", internal_jvm_junit_test_suite = "jvm_junit_test_suite")',
+            'load("@confluent_rules//scala:scala_library.bzl", confluent_scala_library = "scala_library")' : 'load("@io_bazel_rules_scala//scala:scala.bzl", oss_scala_library = "scala_library")',
+            'confluent_scala_library': 'oss_scala_library',
+            'confluent_jvm_junit_test_suite': 'internal_jvm_junit_test_suite',
+        }, paths = glob(["kafka-bazel/kafka-overlay/BUILD.bazel", "kafka-bazel/kafka-overlay/tools-bazel/library_wrappers.bzl"])),    
+        # This needs to be at the top of the file otherwise we have cyclic dependencies
+        multiple_simple_replacements(replacements = {
+            "ce-kafka": "kafka",
+        }, paths=glob(["**/*"])),
+        insert_before(
+            content = """
+load(":configure.bzl", "kafka_configure")
+
+kafka_configure(
+    name = "kafka",
+    overlay_path = "kafka-overlay",
+    src_path = "../third_party/kafka",
+)
+""",
+            file = "kafka-bazel/WORKSPACE.bazel",
+        ),
+    ],
+)

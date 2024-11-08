@@ -1,0 +1,1768 @@
+load("@apple_rules_lint//lint:defs.bzl", "package_lint_config")
+load("@contrib_rules_jvm//java:defs.bzl", "java_binary")
+load("@io_bazel_rules_scala//scala:scala.bzl", "scala_binary", "scala_test", "scala_test_suite")
+load("@scala_multiverse//:cross_scala_config.bzl", "BASE_SCALA_VERSION", "maven_dep")
+load("//tools-bazel:copy_system_test_jars.bzl", "conditional_copy_dep_jars")
+load("//tools-bazel:library_wrappers.bzl", "java_library", "jvm_junit_test_suite", "scala_export", "scala_library")
+load("//tools-bazel:message_generator.bzl", "message_generator")
+load(":generated_test_args.bzl", "per_test_args")
+
+package_lint_config({
+    "java-checkstyle": "//checkstyle:checkstyle_config_core",
+})
+
+package(default_visibility = ["//visibility:public"])
+
+message_generator(
+    name = "generated",
+    srcs = glob(["src/main/resources/common/message/**/*.json"]),
+    args = [
+        "-p",
+        "kafka.internals.generated",
+        "-o",
+        "generated/srcs",
+        "-i",
+        "core/src/main/resources/common/message",
+        "-m",
+        "MessageDataGenerator",
+    ],
+)
+
+scala_export(
+    name = "core",
+    srcs = [":generated"] + glob([
+        "src/main/**/*.scala",
+        "src/main/**/*.java",
+    ]),
+    classifier_artifacts = {
+        "test": ":core-test-jar",
+    },
+    enable_test_jar_copy = True,
+    maven_coordinates = "org.apache.kafka:kafka_%s:$(maven_version)" % BASE_SCALA_VERSION,
+    neverlink_option = True,
+    resources = glob([
+        "src/main/resources/**/*",
+    ]),
+    runtime_deps_exclude = [
+        "//clients",
+        "@io_bazel_rules_scala_scala_library//jar",
+    ],
+    tags = ["no-javadocs"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//clients",
+        "//coordinator-common",
+        "//dependencies:netty_tcnative_boringssl_static_all",
+        "//group-coordinator",
+        "//group-coordinator/group-coordinator-api",
+        "//metadata",
+        "//raft",
+        "//server",
+        "//server-common",
+        "//share",
+        "//storage",
+        "//storage/api",
+        "//tools/tools-api",
+        "//transaction-coordinator",
+        "@io_bazel_rules_scala_scala_library//jar",
+        "@io_bazel_rules_scala_scala_reflect//jar",
+        "@maven//:com_amazonaws_aws_java_sdk_core",
+        "@maven//:com_amazonaws_aws_java_sdk_s3",
+        "@maven//:com_amazonaws_aws_java_sdk_sts",
+        "@maven//:com_azure_azure_core",
+        "@maven//:com_azure_azure_identity",
+        "@maven//:com_azure_azure_storage_blob",
+        "@maven//:com_fasterxml_jackson_core_jackson_annotations",
+        "@maven//:com_fasterxml_jackson_core_jackson_core",
+        "@maven//:com_fasterxml_jackson_core_jackson_databind",
+        "@maven//:com_fasterxml_jackson_dataformat_jackson_dataformat_csv",
+        "@maven//:com_fasterxml_jackson_datatype_jackson_datatype_jdk8",
+        "@maven//:com_github_ben_manes_caffeine_caffeine",
+        "@maven//:com_google_http_client_google_http_client",
+        "@maven//:com_nimbusds_nimbus_jose_jwt",
+        "@maven//:net_minidev_json_smart",
+        "@maven//:software_amazon_awssdk_auth",
+        "@maven//:software_amazon_awssdk_aws_core",
+        "@maven//:software_amazon_awssdk_regions",
+        "@maven//:software_amazon_awssdk_s3",
+        "@maven//:software_amazon_awssdk_sdk_core",
+        "@maven//:software_amazon_awssdk_sts",
+        "@maven_compile_only//:ch_qos_reload4j_reload4j",
+        maven_dep("com.fasterxml.jackson.module::jackson-module-scala"),
+        "@maven//:com_google_api_gax",
+        "@maven//:com_google_auth_google_auth_library_oauth2_http",
+        "@maven//:com_google_cloud_google_cloud_core",
+        "@maven//:com_google_cloud_google_cloud_storage",
+        "@maven//:com_google_code_findbugs_annotations",
+        "@maven//:com_google_code_gson_gson",
+        "@maven//:com_google_crypto_tink_tink",
+        "@maven//:com_google_crypto_tink_tink_gcpkms",
+        "@maven//:com_google_flatbuffers_flatbuffers_java",
+        "@maven//:com_google_guava_guava",
+        "@maven//:com_google_protobuf_protobuf_java",
+        "@maven//:com_google_protobuf_protobuf_java_util",
+        "@maven//:com_squareup_okhttp3_okhttp",
+        maven_dep("com.typesafe.scala-logging::scala-logging"),
+        "@maven//:com_yammer_metrics_metrics_core",
+        "@maven//:commons_cli_commons_cli",  # ZooKeeperMain depends on commons-cli but declares the dependency as `provided`
+        "@maven//:commons_io_commons_io",
+        "@maven//:commons_validator_commons_validator",
+        "@maven//:io_dropwizard_metrics_metrics_core",
+        "@maven//:io_grpc_grpc_api",
+        "@maven//:io_grpc_grpc_core",
+        "@maven//:io_grpc_grpc_protobuf",
+        "@maven//:io_grpc_grpc_stub",
+        "@maven//:javax_servlet_javax_servlet_api",
+        "@maven//:net_sf_jopt_simple_jopt_simple",
+        "@maven//:net_sourceforge_argparse4j_argparse4j",
+        "@maven//:org_apache_commons_commons_pool2",
+        "@maven//:org_apache_httpcomponents_httpclient",
+        "@maven//:org_apache_httpcomponents_httpcore",
+        "@maven//:org_apache_zookeeper_zookeeper",
+        "@maven//:org_apache_zookeeper_zookeeper_jute",
+        "@maven//:org_bitbucket_b_c_jose4j",
+        "@maven//:org_eclipse_jetty_jetty_server",
+        maven_dep("org.scala-lang.modules::scala-collection-compat"),
+        maven_dep("org.scala-lang.modules::scala-java8-compat"),
+        "@maven//:io_netty_netty_buffer",
+        "@maven//:io_netty_netty_common",
+        "@maven//:io_netty_netty_handler",
+        "@maven//:io_opentelemetry_opentelemetry_api",
+        "@maven//:io_opentelemetry_opentelemetry_context",
+        "@maven//:org_slf4j_slf4j_api",
+        "@maven//:org_yaml_snakeyaml",
+    ],
+)
+
+java_binary(
+    name = "OnDemandAudit",
+    main_class = "kafka.durability.ondemand.OnDemandAudit",
+    visibility = ["//visibility:public"],
+    runtime_deps = [":core"],
+)
+
+java_binary(
+    name = "DumpDurabilityDb",
+    main_class = "kafka.durability.tools.DumpDurabilityDb",
+    visibility = ["//visibility:public"],
+    runtime_deps = [":core"],
+)
+
+java_binary(
+    name = "UpdateDurabilityDb",
+    main_class = "kafka.durability.tools.UpdateDurabilityDb",
+    visibility = ["//visibility:public"],
+    runtime_deps = [":core"],
+)
+
+java_binary(
+    name = "ResetTierPartitionState",
+    main_class = "kafka.restore.ResetTierPartitionState",
+    visibility = ["//visibility:public"],
+    runtime_deps = [":core"],
+)
+
+java_binary(
+    name = "Restore",
+    main_class = "kafka.restore.Restore",
+    visibility = ["//visibility:public"],
+    runtime_deps = [":core"],
+)
+
+java_binary(
+    name = "RestoreTierPartitionState",
+    main_class = "kafka.restore.RestoreTierPartitionState",
+    visibility = ["//visibility:public"],
+    runtime_deps = [":core"],
+)
+
+java_binary(
+    name = "TopicPartitionConfigMapGenerator",
+    main_class = "kafka.restore.configmap.TopicPartitionConfigMapGenerator",
+    visibility = ["//visibility:public"],
+    runtime_deps = [":core"],
+)
+
+java_binary(
+    name = "MetadataShellTool",
+    main_class = "kafka.shell.MetadataShellTool",
+    visibility = ["//visibility:public"],
+    runtime_deps = [":core"],
+)
+
+java_binary(
+    name = "DownloadTieredObject",
+    main_class = "kafka.tier.tools.DownloadTieredObject",
+    visibility = ["//visibility:public"],
+    runtime_deps = [":core"],
+)
+
+java_binary(
+    name = "DumpTierPartitionState",
+    main_class = "kafka.tier.tools.DumpTierPartitionState",
+    visibility = ["//visibility:public"],
+    runtime_deps = [":core"],
+)
+
+java_binary(
+    name = "InspectTieredObjects",
+    main_class = "kafka.tier.tools.InspectTieredObjects",
+    visibility = ["//visibility:public"],
+    runtime_deps = [":core"],
+)
+
+java_binary(
+    name = "TierMetadataComparator",
+    main_class = "kafka.tier.tools.TierMetadataComparator",
+    visibility = ["//visibility:public"],
+    runtime_deps = [":core"],
+)
+
+java_binary(
+    name = "TierMetadataDebugger",
+    main_class = "kafka.tier.tools.TierMetadataDebugger",
+    visibility = ["//visibility:public"],
+    runtime_deps = [":core"],
+)
+
+java_binary(
+    name = "TierMetadataValidator",
+    main_class = "kafka.tier.tools.TierMetadataValidator",
+    visibility = ["//visibility:public"],
+    runtime_deps = [":core"],
+)
+
+java_binary(
+    name = "TierPartitionStateFencingTrigger",
+    main_class = "kafka.tier.tools.TierPartitionStateFencingTrigger",
+    visibility = ["//visibility:public"],
+    runtime_deps = [":core"],
+)
+
+java_binary(
+    name = "TierPartitionStateRestoreRawInputGenerator",
+    main_class = "kafka.tier.tools.TierPartitionStateRestoreRawInputGenerator",
+    visibility = ["//visibility:public"],
+    runtime_deps = [":core"],
+)
+
+java_binary(
+    name = "TierPartitionStateRestoreTrigger",
+    main_class = "kafka.tier.tools.TierPartitionStateRestoreTrigger",
+    visibility = ["//visibility:public"],
+    runtime_deps = [":core"],
+)
+
+java_binary(
+    name = "TierPartitionUnfreezeLogStartOffsetTrigger",
+    main_class = "kafka.tier.tools.TierPartitionUnfreezeLogStartOffsetTrigger",
+    visibility = ["//visibility:public"],
+    runtime_deps = [":core"],
+)
+
+java_binary(
+    name = "TierTopicPartitionId",
+    main_class = "kafka.tier.tools.TierTopicPartitionId",
+    visibility = ["//visibility:public"],
+    runtime_deps = [":core"],
+)
+
+java_binary(
+    name = "ValidateAndRestoreSegments",
+    main_class = "kafka.tier.tools.ValidateAndRestoreSegments",
+    visibility = ["//visibility:public"],
+    runtime_deps = [":core"],
+)
+
+java_binary(
+    name = "ValidateSegments",
+    main_class = "kafka.tier.tools.ValidateSegments",
+    visibility = ["//visibility:public"],
+    runtime_deps = [":core"],
+)
+
+java_binary(
+    name = "StreamsResetter",
+    main_class = "kafka.tools.StreamsResetter",
+    visibility = ["//visibility:public"],
+    runtime_deps = [":core"],
+)
+
+scala_binary(
+    name = "KafkaConfig",
+    main_class = "kafka.server.KafkaConfig",
+    visibility = ["//visibility:public"],
+    runtime_deps = [":core"],
+)
+
+# future work: optimize this global variable for each test suite
+DEPS = [
+    ":core",
+    "//clients",
+    "//clients:clients-tests-test-lib",
+    "//group-coordinator",
+    "//group-coordinator:group-coordinator-tests-test-lib",
+    "//metadata",
+    "//metadata:metadata-tests-test-lib",
+    "//raft",
+    "//raft:raft-tests-test-lib",
+    "//server",
+    "//server:server-tests-test-lib",
+    "//server-common",
+    "//server-common:server-common-tests-test-lib",
+    "//shell",
+    "//storage/api",
+    "//storage/api:api-tests-test-lib",
+    "//storage",
+    "//tools/tools-api",
+    "//transaction-coordinator",
+    "@maven//:ch_qos_reload4j_reload4j",
+    "@maven//:com_amazonaws_aws_java_sdk_core",
+    "@maven//:com_amazonaws_aws_java_sdk_s3",
+    "@maven//:com_amazonaws_aws_java_sdk_sts",
+    "@maven//:com_azure_azure_core",
+    "@maven//:com_azure_azure_identity",
+    "@maven//:com_azure_azure_storage_blob",
+    "@maven//:com_azure_azure_storage_common",
+    "@maven//:com_fasterxml_jackson_core_jackson_annotations",
+    "@maven//:com_fasterxml_jackson_core_jackson_core",
+    "@maven//:com_fasterxml_jackson_core_jackson_databind",
+    "@maven//:com_fasterxml_jackson_dataformat_jackson_dataformat_csv",
+    "@maven//:com_fasterxml_jackson_datatype_jackson_datatype_jdk8",
+    "@maven//:com_google_api_client_google_api_client",
+    "@maven//:com_google_api_gax",
+    "@maven//:com_google_auth_google_auth_library_oauth2_http",
+    "@maven//:com_google_cloud_google_cloud_core",
+    "@maven//:com_google_cloud_google_cloud_core_http",
+    "@maven//:com_google_cloud_google_cloud_storage",
+    "@maven//:com_google_code_findbugs_annotations",
+    "@maven//:com_google_code_gson_gson",
+    "@maven//:com_google_crypto_tink_tink",
+    "@maven//:com_google_crypto_tink_tink_gcpkms",
+    "@maven//:com_google_flatbuffers_flatbuffers_java",
+    "@maven//:com_google_guava_guava",
+    "@maven//:com_google_http_client_google_http_client",
+    "@maven//:com_google_http_client_google_http_client_gson",
+    "@maven//:com_google_protobuf_protobuf_java",
+    "@maven//:com_google_protobuf_protobuf_java_util",
+    "@maven//:com_yammer_metrics_metrics_core",
+    "@maven//:commons_lang_commons_lang",
+    "@maven//:io_grpc_grpc_api",
+    "@maven//:io_grpc_grpc_core",
+    "@maven//:io_grpc_grpc_inprocess",
+    "@maven//:io_grpc_grpc_stub",
+    "@maven//:io_opentelemetry_opentelemetry_api",
+    "@maven//:io_opentelemetry_opentelemetry_context",
+    "@maven//:io_netty_netty_buffer",
+    "@maven//:io_netty_netty_common",
+    "@maven//:io_netty_netty_handler",
+    "@maven//:javax_servlet_javax_servlet_api",
+    "@maven//:jfree_jcommon",
+    "@maven//:jfree_jfreechart",
+    "@maven//:joda_time_joda_time",
+    "@maven//:junit_junit",
+    "@maven//:net_jqwik_jqwik_api",
+    "@maven//:net_sf_ehcache_ehcache",
+    "@maven//:net_sf_jopt_simple_jopt_simple",
+    "@maven//:net_sourceforge_argparse4j_argparse4j",
+    "@maven//:org_apache_commons_commons_lang3",
+    "@maven//:org_apache_commons_commons_pool2",
+    "@maven//:org_apache_directory_api_api_asn1_api",
+    "@maven//:org_apache_directory_api_api_ldap_client_api",
+    "@maven//:org_apache_directory_api_api_ldap_codec_core",
+    "@maven//:org_apache_directory_api_api_ldap_codec_standalone",
+    "@maven//:org_apache_directory_api_api_ldap_extras_aci",
+    "@maven//:org_apache_directory_api_api_ldap_extras_codec",
+    "@maven//:org_apache_directory_api_api_ldap_extras_codec_api",
+    "@maven//:org_apache_directory_api_api_ldap_extras_sp",
+    "@maven//:org_apache_directory_api_api_ldap_extras_trigger",
+    "@maven//:org_apache_directory_api_api_ldap_extras_util",
+    "@maven//:org_apache_directory_api_api_ldap_model",
+    "@maven//:org_apache_directory_api_api_ldap_net_mina",
+    "@maven//:org_apache_directory_api_api_ldap_schema_data",
+    "@maven//:org_apache_directory_api_api_util",
+    "@maven//:org_apache_directory_server_apacheds_core",
+    "@maven//:org_apache_directory_server_apacheds_core_api",
+    "@maven//:org_apache_directory_server_apacheds_core_constants",
+    "@maven//:org_apache_directory_server_apacheds_interceptor_kerberos",
+    "@maven//:org_apache_directory_server_apacheds_jdbm_partition",
+    "@maven//:org_apache_directory_server_apacheds_kerberos_codec",
+    "@maven//:org_apache_directory_server_apacheds_ldif_partition",
+    "@maven//:org_apache_directory_server_apacheds_mavibot_partition",
+    "@maven//:org_apache_directory_server_apacheds_protocol_kerberos",
+    "@maven//:org_apache_directory_server_apacheds_protocol_ldap",
+    "@maven//:org_apache_directory_server_apacheds_protocol_shared",
+    "@maven//:org_apache_directory_server_apacheds_xdbm_partition",
+    "@maven//:org_apache_httpcomponents_httpclient",
+    "@maven//:org_apache_httpcomponents_httpcore",
+    "@maven//:org_apache_mina_mina_core",
+    "@maven//:org_apache_zookeeper_zookeeper",
+    "@maven//:org_apache_zookeeper_zookeeper_jute",
+    "@maven//:org_apiguardian_apiguardian_api",
+    "@maven//:org_bitbucket_b_c_jose4j",
+    "//dependencies:easymock",
+    "@maven//:org_eclipse_jetty_jetty_server",
+    "@maven//:org_junit_jupiter_junit_jupiter",
+    "@maven//:org_junit_jupiter_junit_jupiter_api",
+    "@maven//:org_junit_jupiter_junit_jupiter_params",
+    "@maven//:org_junit_platform_junit_platform_commons",
+    "//dependencies:mockito_core",
+    "@maven//:org_opentest4j_opentest4j",
+    "@maven//:org_slf4j_slf4j_api",
+    "@maven//:org_yaml_snakeyaml",
+    maven_dep("com.fasterxml.jackson.module::jackson-module-scala"),
+    maven_dep("com.typesafe.scala-logging::scala-logging"),
+    maven_dep("org.scala-lang.modules::scala-collection-compat"),
+    maven_dep("org.scala-lang.modules::scala-java8-compat"),
+    maven_dep("org.scalacheck::scalacheck"),
+    maven_dep("org.scalactic::scalactic"),
+    maven_dep("org.scalatest::scalatest"),
+]
+
+# Ideally, we could just compile the java and scala code together, but
+# scala_library outputs separated java and scala jars. As far as I could tell,
+# there is not currently a way to access the java jar output via a label.
+# And there is not an option to generate a merged jar (see https://github.com/bazelbuild/rules_scala/issues/888)
+# So the workaround is to generate two separate jars and merge them with singlejar in a genrule.
+scala_library(
+    name = "core-test-jar-scala",
+    srcs = glob([
+        "src/test/scala/**/*.scala",
+    ]),
+    resources = glob(["src/test/resources/**/*"]),
+    tags = [
+        "no-java-spotbugs",
+    ],
+    deps = DEPS + [
+        ":core-test-jar-java",
+        ":scala-server-utils-test-utils",
+        "//coordinator-common",
+        "//share",
+        "@io_bazel_rules_scala_scala_library//jar",
+        "@maven//:com_github_ben_manes_caffeine_caffeine",
+        "@maven//:commons_io_commons_io",
+        "@maven//:io_projectreactor_reactor_core",
+        "@maven//:org_reactivestreams_reactive_streams",
+        "@maven//:software_amazon_awssdk_aws_core",
+        "@maven//:software_amazon_awssdk_http_client_spi",
+        "@maven//:software_amazon_awssdk_s3",
+        "@maven//:software_amazon_awssdk_sdk_core",
+        "@maven//:software_amazon_awssdk_utils",
+    ],
+)
+
+java_library(
+    name = "core-test-jar-java",
+    srcs = glob([
+        "src/test/java/**/*.java",
+    ]) + [":generated"],
+    tags = [
+        "no-java-spotbugs",
+    ],
+    deps = DEPS + [
+        ":scala-server-utils-test-utils",
+        "//share",
+        "@io_bazel_rules_scala_scala_library//jar",
+        "@maven//:com_github_ben_manes_caffeine_caffeine",
+        "@maven//:commons_io_commons_io",
+        "@maven//:io_projectreactor_reactor_core",
+        "@maven//:org_reactivestreams_reactive_streams",
+        "@maven//:software_amazon_awssdk_aws_core",
+        "@maven//:software_amazon_awssdk_s3",
+        "@maven//:software_amazon_awssdk_sdk_core",
+        "@maven//:software_amazon_awssdk_utils",
+    ],
+)
+
+genrule(
+    name = "core-test-jar",
+    srcs = [
+        ":core-test-jar-scala",
+        ":core-test-jar-java",
+    ],
+    outs = ["core-test-jar.jar"],
+    cmd = """
+    $(location @bazel_tools//tools/jdk:singlejar) \
+        --output $@ \
+        --sources $(location :core-test-jar-scala) \
+            $(location :core-test-jar-java)
+    """,
+    tools = ["@bazel_tools//tools/jdk:singlejar"],
+)
+
+conditional_copy_dep_jars(
+    name = "copy-core-dep-jars",
+    include_scala_version = True,
+    libs_target = ":core",
+    libs_target_exclude_list = [
+        "//clients",
+    ],
+    output_directory = "dependant-libs",
+    testlibs_target = [
+        ":core-test-jar-scala",
+        ":core-test-jar-java",
+    ],
+    testlibs_target_exclude_list = [
+        "@maven//:org_bouncycastle_bcpkix_jdk18on",
+        "@maven//:org_bouncycastle_bcprov_jdk18on",
+        "@maven//:org_bouncycastle_bcutil_jdk18on",
+        "@maven//:org_bouncycastle_bc_fips",
+    ],
+    testlibs_target_include_list = [
+        "@maven//:ch_qos_reload4j_reload4j",
+    ],
+)
+
+# copy core test dependant jars and include core, server-common and clients test JAR's in the dependant-testlibs folder.
+conditional_copy_dep_jars(
+    name = "copy-core-testdep-jars",
+    output_directory = "dependant-testlibs",
+    targets_without_runtime_classpath = [
+        ":core-test-jar-scala",
+        ":core-test-jar-java",
+        "//server-common:server-common-test-jar",
+        "//clients:clients-test-jar",
+    ],
+    testlibs_target = [
+        ":core-test-jar-scala",
+        ":core-test-jar-java",
+    ],
+)
+
+#---------------------------java-------------------------------
+# since we use an abnormal package name which is not handled by java_test_suite,
+# we need to use jvm_junit_test_suite from confluent_rules.
+jvm_junit_test_suite(
+    name = "kafka-admin",
+    srcs = glob(["src/test/java/kafka/admin/**/*.java"]),
+    additional_library_srcs = [
+        "src/test/java/kafka/admin/ConfigCommandIntegrationTest.java",
+    ],
+    per_test_args = per_test_args,
+    resources = glob(["src/test/resources/**/*"]),
+    tags = [
+        "no-java-checkstyle",
+        "no-java-spotbugs",
+    ],
+    runtime_deps = [
+        "@maven//:org_junit_jupiter_junit_jupiter_engine",
+        "@maven//:org_junit_platform_junit_platform_launcher",
+        "@maven//:org_junit_platform_junit_platform_reporting",
+    ],
+    deps = DEPS + [
+        ":scala-server-utils-test-utils",
+        "@io_bazel_rules_scala_scala_library//jar",
+    ],
+)
+
+jvm_junit_test_suite(
+    name = "kafka-assignor",
+    srcs = glob(["src/test/java/kafka/assignor/**/*.java"]),
+    per_test_args = per_test_args,
+    resources = glob(["src/test/resources/**/*"]),
+    tags = [
+        "no-java-checkstyle",
+        "no-java-spotbugs",
+    ],
+    runtime_deps = [
+        "@maven//:org_junit_jupiter_junit_jupiter_engine",
+        "@maven//:org_junit_platform_junit_platform_launcher",
+        "@maven//:org_junit_platform_junit_platform_reporting",
+    ],
+    deps = DEPS,
+)
+
+jvm_junit_test_suite(
+    name = "kafka-catalog",
+    srcs = glob(["src/test/java/kafka/catalog/**/*.java"]),
+    per_test_args = per_test_args,
+    resources = glob(["src/test/resources/**/*"]),
+    tags = [
+        "no-java-checkstyle",
+        "no-java-spotbugs",
+    ],
+    runtime_deps = [
+        "@maven//:org_junit_jupiter_junit_jupiter_engine",
+        "@maven//:org_junit_platform_junit_platform_launcher",
+        "@maven//:org_junit_platform_junit_platform_reporting",
+    ],
+    deps = DEPS + [
+        "@io_bazel_rules_scala_scala_library//jar",
+    ],
+)
+
+jvm_junit_test_suite(
+    name = "kafka-common",
+    srcs = glob(["src/test/java/kafka/common/**/*.java"]),
+    per_test_args = per_test_args,
+    resources = glob(["src/test/resources/**/*"]),
+    tags = [
+        "no-java-checkstyle",
+        "no-java-spotbugs",
+    ],
+    runtime_deps = [
+        "@maven//:org_junit_jupiter_junit_jupiter_engine",
+        "@maven//:org_junit_platform_junit_platform_launcher",
+        "@maven//:org_junit_platform_junit_platform_reporting",
+    ],
+    deps = DEPS + [
+        "@io_bazel_rules_scala_scala_library//jar",
+    ],
+)
+
+jvm_junit_test_suite(
+    name = "kafka-controller",
+    srcs = glob(["src/test/java/kafka/controller/**/*.java"]),
+    per_test_args = per_test_args,
+    resources = glob(["src/test/resources/**/*"]),
+    tags = [
+        "no-java-checkstyle",
+        "no-java-spotbugs",
+    ],
+    runtime_deps = [
+        "@maven//:org_junit_jupiter_junit_jupiter_engine",
+        "@maven//:org_junit_platform_junit_platform_launcher",
+        "@maven//:org_junit_platform_junit_platform_reporting",
+    ],
+    deps = DEPS + [
+        "@io_bazel_rules_scala_scala_library//jar",
+    ],
+)
+
+jvm_junit_test_suite(
+    name = "kafka-durability-ondemand",
+    srcs = glob(["src/test/java/kafka/durability/ondemand/**/*.java"]),
+    data = [
+        "src/test/java/kafka/durability/ondemand/topic-partition-config-file.txt",
+    ],
+    per_test_args = per_test_args,
+    resources = glob(["src/test/resources/**/*"]),
+    tags = [
+        "no-java-checkstyle",
+        "no-java-spotbugs",
+    ],
+    runtime_deps = [
+        "@maven//:org_junit_jupiter_junit_jupiter_engine",
+        "@maven//:org_junit_platform_junit_platform_launcher",
+        "@maven//:org_junit_platform_junit_platform_reporting",
+        "@maven//:org_slf4j_slf4j_reload4j",
+    ],
+    deps = DEPS + [
+        "@io_bazel_rules_scala_scala_library//jar",
+    ],
+)
+
+jvm_junit_test_suite(
+    name = "kafka-log-remote",
+    srcs = glob(["src/test/java/kafka/log/remote/**/*.java"]),
+    per_test_args = per_test_args,
+    resources = glob(["src/test/resources/**/*"]),
+    tags = [
+        "no-java-checkstyle",
+        "no-java-spotbugs",
+    ],
+    runtime_deps = [
+        "@maven//:org_junit_jupiter_junit_jupiter_engine",
+        "@maven//:org_junit_platform_junit_platform_launcher",
+        "@maven//:org_junit_platform_junit_platform_reporting",
+    ],
+    deps = DEPS + [
+        ":scala-server-utils-test-utils",
+        "@io_bazel_rules_scala_scala_library//jar",
+    ],
+)
+
+jvm_junit_test_suite(
+    name = "kafka-network",
+    srcs = glob(["src/test/java/kafka/network/**/*.java"]),
+    per_test_args = per_test_args,
+    resources = glob(["src/test/resources/**/*"]),
+    tags = [
+        "no-java-checkstyle",
+        "no-java-spotbugs",
+    ],
+    runtime_deps = [
+        "@maven//:org_junit_jupiter_junit_jupiter_engine",
+        "@maven//:org_junit_platform_junit_platform_launcher",
+        "@maven//:org_junit_platform_junit_platform_reporting",
+    ],
+    deps = DEPS + [
+        "@io_bazel_rules_scala_scala_library//jar",
+    ],
+)
+
+jvm_junit_test_suite(
+    name = "kafka-server-cell",
+    srcs = glob(["src/test/java/kafka/server/cell/**/*.java"]),
+    per_test_args = per_test_args,
+    resources = glob(["src/test/resources/**/*"]),
+    tags = [
+        "no-java-checkstyle",
+        "no-java-spotbugs",
+    ],
+    runtime_deps = [
+        "@maven//:org_junit_jupiter_junit_jupiter_engine",
+        "@maven//:org_junit_platform_junit_platform_launcher",
+        "@maven//:org_junit_platform_junit_platform_reporting",
+    ],
+    deps = DEPS + [
+        "@io_bazel_rules_scala_scala_library//jar",
+    ],
+)
+
+jvm_junit_test_suite(
+    name = "kafka-server",
+    srcs = glob(["src/test/java/kafka/server/*.java"]),
+    per_test_args = per_test_args,
+    resources = glob(["src/test/resources/**/*"]),
+    tags = [
+        "no-java-checkstyle",
+        "no-java-spotbugs",
+    ],
+    runtime_deps = [
+        "@maven//:org_junit_jupiter_junit_jupiter_engine",
+        "@maven//:org_junit_platform_junit_platform_launcher",
+        "@maven//:org_junit_platform_junit_platform_reporting",
+    ],
+    deps = DEPS + [
+        ":scala-server-utils-test-utils",
+        "@io_bazel_rules_scala_scala_library//jar",
+    ],
+)
+
+jvm_junit_test_suite(
+    name = "kafka-server-logger",
+    srcs = glob(["src/test/java/kafka/server/logger/**/*.java"]),
+    per_test_args = per_test_args,
+    resources = glob(["src/test/resources/**/*"]),
+    tags = [
+        "no-java-checkstyle",
+        "no-java-spotbugs",
+    ],
+    runtime_deps = [
+        "@maven//:org_junit_jupiter_junit_jupiter_engine",
+        "@maven//:org_junit_platform_junit_platform_launcher",
+        "@maven//:org_junit_platform_junit_platform_reporting",
+    ],
+    deps = DEPS + [
+        "@io_bazel_rules_scala_scala_library//jar",
+        "@maven//:org_slf4j_slf4j_reload4j",
+    ],
+)
+
+jvm_junit_test_suite(
+    name = "kafka-server-resource",
+    srcs = glob(["src/test/java/kafka/server/resource/**/*.java"]),
+    per_test_args = per_test_args,
+    resources = glob(["src/test/resources/**/*"]),
+    tags = [
+        "no-java-checkstyle",
+        "no-java-spotbugs",
+    ],
+    runtime_deps = [
+        "@maven//:org_junit_jupiter_junit_jupiter_engine",
+        "@maven//:org_junit_platform_junit_platform_launcher",
+        "@maven//:org_junit_platform_junit_platform_reporting",
+    ],
+    deps = DEPS + [
+        ":scala-server-utils-test-utils",
+        "@io_bazel_rules_scala_scala_library//jar",
+    ],
+)
+
+jvm_junit_test_suite(
+    name = "kafka-server-share",
+    srcs = glob(["src/test/java/kafka/server/share/**/*.java"]),
+    per_test_args = per_test_args,
+    resources = glob(["src/test/resources/**/*"]),
+    tags = [
+        "no-java-checkstyle",
+        "no-java-spotbugs",
+    ],
+    runtime_deps = [
+        "@maven//:org_junit_jupiter_junit_jupiter_engine",
+        "@maven//:org_junit_platform_junit_platform_launcher",
+        "@maven//:org_junit_platform_junit_platform_reporting",
+    ],
+    deps = DEPS + [
+        ":scala-server-utils-test-utils",
+        "//share",
+        "@io_bazel_rules_scala_scala_library//jar",
+    ],
+)
+
+java_library(
+    name = "kafka-testkit",
+    srcs = glob(["src/test/java/kafka/testkit/**/*.java"]),
+    tags = [
+        "no-java-checkstyle",
+        "no-java-spotbugs",
+    ],
+    deps = DEPS + [
+        "@io_bazel_rules_scala_scala_library//jar",
+    ],
+)
+
+jvm_junit_test_suite(
+    name = "kafka-coordinator",
+    srcs = glob(["src/test/java/kafka/coordinator/**/*.java"]),
+    per_test_args = per_test_args,
+    resources = glob(["src/test/resources/**/*"]),
+    tags = [
+        "no-java-checkstyle",
+        "no-java-spotbugs",
+    ],
+    runtime_deps = [
+        "@maven//:org_junit_jupiter_junit_jupiter_engine",
+        "@maven//:org_junit_platform_junit_platform_launcher",
+        "@maven//:org_junit_platform_junit_platform_reporting",
+    ],
+    deps = DEPS + [
+        "@io_bazel_rules_scala_scala_library//jar",
+    ],
+)
+
+#--------------------scala/unit------------------------------
+
+jvm_junit_test_suite(
+    name = "scala-unit-kafka-admin",
+    srcs = glob(
+        ["src/test/scala/unit/kafka/admin/**/*.scala"],
+        exclude = [
+            "src/test/scala/unit/kafka/admin/FeatureCommandTest.scala",  # empty file
+            "src/test/scala/unit/kafka/admin/TopicCommandWithZKClientTest.scala",  # empty file
+        ],
+    ),
+    per_test_args = per_test_args,
+    prefixes = [
+        "src/test/scala/unit/",
+    ],
+    resources = glob(["src/test/resources/**/*"]),
+    tags = [
+        "no-java-checkstyle",
+        "no-java-spotbugs",
+    ],
+    runtime_deps = [
+        "@maven//:io_dropwizard_metrics_metrics_core",
+        "@maven//:org_bouncycastle_bcpkix_jdk18on",
+        "@maven//:org_junit_jupiter_junit_jupiter_engine",
+        "@maven//:org_junit_platform_junit_platform_launcher",
+        "@maven//:org_junit_platform_junit_platform_reporting",
+        "@maven//:org_slf4j_slf4j_reload4j",
+    ],
+    deps = DEPS + [
+        ":scala-server-utils-test-utils",
+    ],
+)
+
+jvm_junit_test_suite(
+    name = "scala-unit-kafka-availability",
+    srcs = glob(["src/test/scala/unit/kafka/availability/**/*.scala"]),
+    per_test_args = per_test_args,
+    prefixes = [
+        "src/test/scala/unit/",
+    ],
+    resources = glob(["src/test/resources/**/*"]),
+    tags = [
+        "no-java-checkstyle",
+        "no-java-spotbugs",
+    ],
+    runtime_deps = [
+        "@maven//:io_dropwizard_metrics_metrics_core",
+        "@maven//:org_bouncycastle_bcpkix_jdk18on",
+        "@maven//:org_junit_jupiter_junit_jupiter_engine",
+        "@maven//:org_junit_platform_junit_platform_launcher",
+        "@maven//:org_junit_platform_junit_platform_reporting",
+        "@maven//:org_slf4j_slf4j_reload4j",
+    ],
+    deps = DEPS + [
+        ":scala-server-utils-test-utils",
+    ],
+)
+
+jvm_junit_test_suite(
+    name = "scala-unit-kafka-cluster",
+    srcs = glob(
+        ["src/test/scala/unit/kafka/cluster/**/*.scala"],
+    ),
+    additional_library_srcs = [
+        "src/test/scala/unit/kafka/cluster/AbstractPartitionTest.scala",
+    ],
+    per_test_args = per_test_args,
+    prefixes = [
+        "src/test/scala/unit/",
+    ],
+    resources = glob(["src/test/resources/**/*"]),
+    tags = [
+        "no-java-checkstyle",
+        "no-java-spotbugs",
+    ],
+    visibility = ["//visibility:public"],
+    runtime_deps = [
+        "@maven//:io_dropwizard_metrics_metrics_core",
+        "@maven//:org_bouncycastle_bcpkix_jdk18on",
+        "@maven//:org_junit_jupiter_junit_jupiter_engine",
+        "@maven//:org_junit_platform_junit_platform_launcher",
+        "@maven//:org_junit_platform_junit_platform_reporting",
+        "@maven//:org_slf4j_slf4j_reload4j",
+    ],
+    deps = DEPS + [
+        ":scala-server-utils-test-utils",
+    ],
+)
+
+jvm_junit_test_suite(
+    name = "scala-unit-kafka-common",
+    srcs = glob(["src/test/scala/unit/kafka/common/**/*.scala"]),
+    per_test_args = per_test_args,
+    prefixes = [
+        "src/test/scala/unit/",
+    ],
+    resources = glob(["src/test/resources/**/*"]),
+    tags = [
+        "no-java-checkstyle",
+        "no-java-spotbugs",
+    ],
+    runtime_deps = [
+        "@maven//:io_dropwizard_metrics_metrics_core",
+        "@maven//:org_bouncycastle_bcpkix_jdk18on",
+        "@maven//:org_junit_jupiter_junit_jupiter_engine",
+        "@maven//:org_junit_platform_junit_platform_launcher",
+        "@maven//:org_junit_platform_junit_platform_reporting",
+        "@maven//:org_slf4j_slf4j_reload4j",
+    ],
+    deps = DEPS + [
+        ":scala-server-utils-test-utils",
+    ],
+)
+
+jvm_junit_test_suite(
+    name = "scala-unit-kafka-controller",
+    srcs = glob(
+        ["src/test/scala/unit/kafka/controller/**/*.scala"],
+    ),
+    per_test_args = per_test_args,
+    prefixes = [
+        "src/test/scala/unit/",
+    ],
+    resources = glob(["src/test/resources/**/*"]),
+    tags = [
+        "no-java-checkstyle",
+        "no-java-spotbugs",
+    ],
+    runtime_deps = [
+        "@maven//:io_dropwizard_metrics_metrics_core",
+        "@maven//:org_bouncycastle_bcpkix_jdk18on",
+        "@maven//:org_junit_jupiter_junit_jupiter_engine",
+        "@maven//:org_junit_platform_junit_platform_launcher",
+        "@maven//:org_junit_platform_junit_platform_reporting",
+        "@maven//:org_slf4j_slf4j_reload4j",
+    ],
+    deps = DEPS + [
+        ":scala-server-utils-test-utils",
+    ],
+)
+
+jvm_junit_test_suite(
+    name = "scala-unit-kafka-coordinator",
+    srcs = glob(["src/test/scala/unit/kafka/coordinator/**/*.scala"]),
+    additional_library_srcs = [
+        "src/test/scala/unit/kafka/coordinator/AbstractCoordinatorConcurrencyTest.scala",
+        "src/test/scala/unit/kafka/coordinator/group/GroupCoordinatorConcurrencyTest.scala",
+        "src/test/scala/unit/kafka/coordinator/group/GroupCoordinatorTest.scala",
+    ],
+    per_test_args = per_test_args,
+    prefixes = [
+        "src/test/scala/unit/",
+    ],
+    resources = glob(["src/test/resources/**/*"]),
+    tags = [
+        "no-java-checkstyle",
+        "no-java-spotbugs",
+    ],
+    runtime_deps = [
+        "@maven//:io_dropwizard_metrics_metrics_core",
+        "@maven//:org_bouncycastle_bcpkix_jdk18on",
+        "@maven//:org_junit_jupiter_junit_jupiter_engine",
+        "@maven//:org_junit_platform_junit_platform_launcher",
+        "@maven//:org_junit_platform_junit_platform_reporting",
+        "@maven//:org_slf4j_slf4j_reload4j",
+    ],
+    deps = DEPS + [
+        ":scala-server-utils-test-utils",
+        "//coordinator-common",
+    ],
+)
+
+jvm_junit_test_suite(
+    name = "scala-unit-kafka-migration",
+    srcs = glob(["src/test/scala/unit/kafka/migration/**/*.scala"]),
+    per_test_args = per_test_args,
+    prefixes = [
+        "src/test/scala/unit/",
+    ],
+    resources = glob(["src/test/resources/**/*"]),
+    tags = [
+        "no-java-checkstyle",
+        "no-java-spotbugs",
+    ],
+    runtime_deps = [
+        "@maven//:io_dropwizard_metrics_metrics_core",
+        "@maven//:org_bouncycastle_bcpkix_jdk18on",
+        "@maven//:org_junit_jupiter_junit_jupiter_engine",
+        "@maven//:org_junit_platform_junit_platform_launcher",
+        "@maven//:org_junit_platform_junit_platform_reporting",
+        "@maven//:org_slf4j_slf4j_reload4j",
+    ],
+    deps = DEPS + [
+        ":scala-server-utils-test-utils",
+    ],
+)
+
+jvm_junit_test_suite(
+    name = "scala-unit-kafka-network",
+    srcs = glob(["src/test/scala/unit/kafka/network/**/*.scala"]),
+    per_test_args = per_test_args,
+    prefixes = [
+        "src/test/scala/unit/",
+    ],
+    resources = glob(["src/test/resources/**/*"]),
+    tags = [
+        "no-java-checkstyle",
+        "no-java-spotbugs",
+    ],
+    runtime_deps = [
+        "@maven//:io_dropwizard_metrics_metrics_core",
+        "@maven//:org_bouncycastle_bcpkix_jdk18on",
+        "@maven//:org_junit_jupiter_junit_jupiter_engine",
+        "@maven//:org_junit_platform_junit_platform_launcher",
+        "@maven//:org_junit_platform_junit_platform_reporting",
+        "@maven//:org_slf4j_slf4j_reload4j",
+    ],
+    deps = DEPS + [
+        ":scala-server-utils-test-utils",
+    ],
+)
+
+jvm_junit_test_suite(
+    name = "scala-unit-kafka-raft",
+    srcs = glob(["src/test/scala/unit/kafka/raft/**/*.scala"]),
+    per_test_args = per_test_args,
+    prefixes = [
+        "src/test/scala/unit/",
+    ],
+    resources = glob(["src/test/resources/**/*"]),
+    tags = [
+        "no-java-checkstyle",
+        "no-java-spotbugs",
+    ],
+    runtime_deps = [
+        "@maven//:io_dropwizard_metrics_metrics_core",
+        "@maven//:org_bouncycastle_bcpkix_jdk18on",
+        "@maven//:org_junit_jupiter_junit_jupiter_engine",
+        "@maven//:org_junit_platform_junit_platform_launcher",
+        "@maven//:org_junit_platform_junit_platform_reporting",
+        "@maven//:org_slf4j_slf4j_reload4j",
+    ],
+    deps = DEPS + [
+        ":scala-server-utils-test-utils",
+    ],
+)
+
+jvm_junit_test_suite(
+    name = "scala-unit-kafka-security",
+    srcs = glob(["src/test/scala/unit/kafka/security/**/*.scala"]),
+    additional_library_srcs = [
+        "src/test/scala/unit/kafka/security/authorizer/AuthorizerTest.scala",
+        "src/test/scala/unit/kafka/security/authorizer/BaseAuthorizerTest.scala",
+    ],
+    per_test_args = per_test_args,
+    prefixes = [
+        "src/test/scala/unit/",
+    ],
+    resources = glob(["src/test/resources/**/*"]),
+    tags = [
+        "no-java-checkstyle",
+        "no-java-spotbugs",
+    ],
+    runtime_deps = [
+        "@maven//:io_dropwizard_metrics_metrics_core",
+        "@maven//:org_bouncycastle_bcpkix_jdk18on",
+        "@maven//:org_junit_jupiter_junit_jupiter_engine",
+        "@maven//:org_junit_platform_junit_platform_launcher",
+        "@maven//:org_junit_platform_junit_platform_reporting",
+        "@maven//:org_slf4j_slf4j_reload4j",
+    ],
+    deps = DEPS + [
+        ":scala-server-utils-test-utils",
+    ],
+)
+
+jvm_junit_test_suite(
+    name = "scala-unit-kafka-tools",
+    srcs = glob(
+        ["src/test/scala/unit/kafka/tools/**/*.scala"],
+    ),
+    additional_library_srcs = ["src/test/scala/unit/kafka/tools/DumpLogSegmentsTest.scala"],
+    per_test_args = per_test_args,
+    prefixes = [
+        "src/test/scala/unit/",
+    ],
+    resources = glob(["src/test/resources/**/*"]),
+    tags = [
+        "no-java-checkstyle",
+        "no-java-spotbugs",
+    ],
+    runtime_deps = [
+        "@maven//:io_dropwizard_metrics_metrics_core",
+        "@maven//:org_bouncycastle_bcpkix_jdk18on",
+        "@maven//:org_junit_jupiter_junit_jupiter_engine",
+        "@maven//:org_junit_platform_junit_platform_launcher",
+        "@maven//:org_junit_platform_junit_platform_reporting",
+        "@maven//:org_slf4j_slf4j_reload4j",
+    ],
+    deps = DEPS + [
+        ":scala-server-utils-test-utils",
+        "//coordinator-common",
+        "@maven//:commons_io_commons_io",
+    ],
+)
+
+jvm_junit_test_suite(
+    name = "scala-unit-kafka-zookeeper",
+    srcs = glob(["src/test/scala/unit/kafka/zookeeper/**/*.scala"]),
+    per_test_args = per_test_args,
+    prefixes = [
+        "src/test/scala/unit/",
+    ],
+    resources = glob(["src/test/resources/**/*"]),
+    tags = [
+        "no-java-checkstyle",
+        "no-java-spotbugs",
+    ],
+    runtime_deps = [
+        "@maven//:io_dropwizard_metrics_metrics_core",
+        "@maven//:org_bouncycastle_bcpkix_jdk18on",
+        "@maven//:org_junit_jupiter_junit_jupiter_engine",
+        "@maven//:org_junit_platform_junit_platform_launcher",
+        "@maven//:org_junit_platform_junit_platform_reporting",
+        "@maven//:org_slf4j_slf4j_reload4j",
+    ],
+    deps = DEPS + [
+        ":scala-server-utils-test-utils",
+    ],
+)
+
+#----------- scala/kafka------------------
+jvm_junit_test_suite(
+    name = "scala-kafka-admin",
+    srcs = glob(
+        ["src/test/scala/kafka/admin/**/*.scala"],
+    ),
+    per_test_args = per_test_args,
+    prefixes = [
+        "src/test/scala/",
+    ],
+    resources = glob(["src/test/resources/**/*"]),
+    tags = [
+        "no-java-checkstyle",
+        "no-java-spotbugs",
+    ],
+    runtime_deps = [
+        "@maven//:io_dropwizard_metrics_metrics_core",
+        "@maven//:org_bouncycastle_bcpkix_jdk18on",
+        "@maven//:org_junit_jupiter_junit_jupiter_engine",
+        "@maven//:org_junit_platform_junit_platform_launcher",
+        "@maven//:org_junit_platform_junit_platform_reporting",
+        "@maven//:org_slf4j_slf4j_reload4j",
+    ],
+    deps = DEPS + [
+        ":scala-server-utils-test-utils",
+    ],
+)
+
+jvm_junit_test_suite(
+    name = "scala-kafka-api",
+    srcs = glob(["src/test/scala/kafka/api/**/*.scala"]),
+    per_test_args = per_test_args,
+    prefixes = [
+        "src/test/scala/",
+    ],
+    resources = glob(["src/test/resources/**/*"]),
+    tags = [
+        "no-java-checkstyle",
+        "no-java-spotbugs",
+    ],
+    runtime_deps = [
+        "@maven//:io_dropwizard_metrics_metrics_core",
+        "@maven//:org_bouncycastle_bcpkix_jdk18on",
+        "@maven//:org_junit_jupiter_junit_jupiter_engine",
+        "@maven//:org_junit_platform_junit_platform_launcher",
+        "@maven//:org_junit_platform_junit_platform_reporting",
+        "@maven//:org_slf4j_slf4j_reload4j",
+    ],
+    deps = DEPS + [
+        ":scala-server-utils-test-utils",
+    ],
+)
+
+jvm_junit_test_suite(
+    name = "scala-kafka-controller",
+    srcs = glob(["src/test/scala/kafka/controller/**/*.scala"]),
+    per_test_args = per_test_args,
+    prefixes = [
+        "src/test/scala/",
+    ],
+    resources = glob(["src/test/resources/**/*"]),
+    tags = [
+        "no-java-checkstyle",
+        "no-java-spotbugs",
+    ],
+    runtime_deps = [
+        "@maven//:io_dropwizard_metrics_metrics_core",
+        "@maven//:org_bouncycastle_bcpkix_jdk18on",
+        "@maven//:org_junit_jupiter_junit_jupiter_engine",
+        "@maven//:org_junit_platform_junit_platform_launcher",
+        "@maven//:org_junit_platform_junit_platform_reporting",
+        "@maven//:org_slf4j_slf4j_reload4j",
+    ],
+    deps = DEPS + [
+        ":scala-server-utils-test-utils",
+    ],
+)
+
+jvm_junit_test_suite(
+    name = "scala-kafka-log",
+    srcs = glob(["src/test/scala/kafka/log/**/*.scala"]),
+    per_test_args = per_test_args,
+    prefixes = [
+        "src/test/scala/",
+    ],
+    resources = glob(["src/test/resources/**/*"]),
+    tags = [
+        "no-java-checkstyle",
+        "no-java-spotbugs",
+    ],
+    runtime_deps = [
+        "@maven//:io_dropwizard_metrics_metrics_core",
+        "@maven//:org_bouncycastle_bcpkix_jdk18on",
+        "@maven//:org_junit_jupiter_junit_jupiter_engine",
+        "@maven//:org_junit_platform_junit_platform_launcher",
+        "@maven//:org_junit_platform_junit_platform_reporting",
+        "@maven//:org_slf4j_slf4j_reload4j",
+    ],
+    deps = DEPS + [":scala-server-utils-test-utils"],
+)
+
+jvm_junit_test_suite(
+    name = "scala-kafka-metrics",
+    srcs = glob(["src/test/scala/kafka/metrics/**/*.scala"]),
+    per_test_args = per_test_args,
+    prefixes = [
+        "src/test/scala/",
+    ],
+    resources = glob(["src/test/resources/**/*"]),
+    tags = [
+        "no-java-checkstyle",
+        "no-java-spotbugs",
+    ],
+    runtime_deps = [
+        "@maven//:io_dropwizard_metrics_metrics_core",
+        "@maven//:org_bouncycastle_bcpkix_jdk18on",
+        "@maven//:org_junit_jupiter_junit_jupiter_engine",
+        "@maven//:org_junit_platform_junit_platform_launcher",
+        "@maven//:org_junit_platform_junit_platform_reporting",
+        "@maven//:org_slf4j_slf4j_reload4j",
+    ],
+    deps = DEPS + [
+        ":scala-server-utils-test-utils",
+    ],
+)
+
+jvm_junit_test_suite(
+    name = "scala-kafka-raft",
+    srcs = glob(["src/test/scala/kafka/raft/**/*.scala"]),
+    per_test_args = per_test_args,
+    prefixes = [
+        "src/test/scala/",
+    ],
+    resources = glob(["src/test/resources/**/*"]),
+    tags = [
+        "no-java-checkstyle",
+        "no-java-spotbugs",
+    ],
+    runtime_deps = [
+        "@maven//:io_dropwizard_metrics_metrics_core",
+        "@maven//:org_bouncycastle_bcpkix_jdk18on",
+        "@maven//:org_junit_jupiter_junit_jupiter_engine",
+        "@maven//:org_junit_platform_junit_platform_launcher",
+        "@maven//:org_junit_platform_junit_platform_reporting",
+        "@maven//:org_slf4j_slf4j_reload4j",
+    ],
+    deps = DEPS + [
+        ":scala-server-utils-test-utils",
+    ],
+)
+
+jvm_junit_test_suite(
+    name = "scala-kafka-tools",
+    srcs = glob(
+        ["src/test/scala/kafka/tools/**/*.scala"],
+    ),
+    per_test_args = per_test_args,
+    prefixes = [
+        "src/test/scala/",
+    ],
+    resources = glob(["src/test/resources/**/*"]),
+    tags = [
+        "no-java-checkstyle",
+        "no-java-spotbugs",
+    ],
+    runtime_deps = [
+        "@maven//:io_dropwizard_metrics_metrics_core",
+        "@maven//:org_bouncycastle_bcpkix_jdk18on",
+        "@maven//:org_junit_jupiter_junit_jupiter_engine",
+        "@maven//:org_junit_platform_junit_platform_launcher",
+        "@maven//:org_junit_platform_junit_platform_reporting",
+        "@maven//:org_slf4j_slf4j_reload4j",
+    ],
+    deps = DEPS + [
+        ":scala-server-utils-test-utils",
+    ],
+)
+
+jvm_junit_test_suite(
+    name = "scala-kafka-zk",
+    srcs = glob(["src/test/scala/kafka/zk/**/*.scala"]),
+    per_test_args = per_test_args,
+    prefixes = [
+        "src/test/scala/",
+    ],
+    resources = glob(["src/test/resources/**/*"]),
+    tags = [
+        "no-java-checkstyle",
+        "no-java-spotbugs",
+    ],
+    runtime_deps = [
+        "@maven//:io_dropwizard_metrics_metrics_core",
+        "@maven//:org_bouncycastle_bcpkix_jdk18on",
+        "@maven//:org_junit_jupiter_junit_jupiter_engine",
+        "@maven//:org_junit_platform_junit_platform_launcher",
+        "@maven//:org_junit_platform_junit_platform_reporting",
+        "@maven//:org_slf4j_slf4j_reload4j",
+    ],
+    deps = DEPS + [
+        ":scala-server-utils-test-utils",
+    ],
+)
+
+#-------------scala/other------------
+scala_library(
+    name = "scala-other-kafka-test-utils",
+    srcs = glob(
+        ["src/test/scala/other/kafka/**/*.scala"],
+        exclude = [
+            "src/test/scala/other/kafka/**/*Test.scala",
+        ],
+    ),
+    tags = [
+        "no-java-checkstyle",
+        "no-java-spotbugs",
+    ],
+    deps = DEPS + [
+        ":scala-server-utils-test-utils",
+    ],
+)
+
+#---------- scala/integration------------
+# bazel test $(bazel query 'filter("scala-integration-.*", tests(//core:all))')
+jvm_junit_test_suite(
+    name = "scala-integration-kafka-admin",
+    srcs = glob(["src/test/scala/integration/kafka/admin/**/*.scala"]),
+    per_test_args = per_test_args,
+    prefixes = [
+        "src/test/scala/integration/",
+    ],
+    resources = glob(["src/test/resources/**/*"]),
+    tags = [
+        "no-java-checkstyle",
+        "no-java-spotbugs",
+    ],
+    runtime_deps = [
+        "@maven//:io_dropwizard_metrics_metrics_core",
+        "@maven//:org_bouncycastle_bcpkix_jdk18on",
+        "@maven//:org_junit_jupiter_junit_jupiter_engine",
+        "@maven//:org_junit_platform_junit_platform_launcher",
+        "@maven//:org_junit_platform_junit_platform_reporting",
+        "@maven//:org_slf4j_slf4j_reload4j",
+    ],
+    deps = DEPS + [
+        ":scala-server-utils-test-utils",
+    ],
+)
+
+jvm_junit_test_suite(
+    name = "scala-integration-kafka-availability",
+    srcs = glob(["src/test/scala/integration/kafka/availability/**/*.scala"]),
+    per_test_args = per_test_args,
+    prefixes = [
+        "src/test/scala/integration/",
+    ],
+    resources = glob(["src/test/resources/**/*"]),
+    tags = [
+        "no-java-checkstyle",
+        "no-java-spotbugs",
+    ],
+    runtime_deps = [
+        "@maven//:io_dropwizard_metrics_metrics_core",
+        "@maven//:org_bouncycastle_bcpkix_jdk18on",
+        "@maven//:org_junit_jupiter_junit_jupiter_engine",
+        "@maven//:org_junit_platform_junit_platform_launcher",
+        "@maven//:org_junit_platform_junit_platform_reporting",
+        "@maven//:org_slf4j_slf4j_reload4j",
+    ],
+    deps = DEPS + [
+        ":scala-server-utils-test-utils",
+    ],
+)
+
+jvm_junit_test_suite(
+    name = "scala-integration-kafka-catalog",
+    srcs = glob(["src/test/scala/integration/kafka/catalog/**/*.scala"]),
+    per_test_args = per_test_args,
+    prefixes = [
+        "src/test/scala/integration/",
+    ],
+    resources = glob(["src/test/resources/**/*"]),
+    tags = [
+        "no-java-checkstyle",
+        "no-java-spotbugs",
+    ],
+    runtime_deps = [
+        "@maven//:io_dropwizard_metrics_metrics_core",
+        "@maven//:org_bouncycastle_bcpkix_jdk18on",
+        "@maven//:org_junit_jupiter_junit_jupiter_engine",
+        "@maven//:org_junit_platform_junit_platform_launcher",
+        "@maven//:org_junit_platform_junit_platform_reporting",
+        "@maven//:org_slf4j_slf4j_reload4j",
+    ],
+    deps = DEPS + [
+        ":scala-server-utils-test-utils",
+    ],
+)
+
+jvm_junit_test_suite(
+    name = "scala-integration-kafka-controller",
+    srcs = glob(["src/test/scala/integration/kafka/controller/**/*.scala"]),
+    per_test_args = per_test_args,
+    prefixes = [
+        "src/test/scala/integration/",
+    ],
+    resources = glob(["src/test/resources/**/*"]),
+    tags = [
+        "no-java-checkstyle",
+        "no-java-spotbugs",
+    ],
+    runtime_deps = [
+        "@maven//:io_dropwizard_metrics_metrics_core",
+        "@maven//:org_bouncycastle_bcpkix_jdk18on",
+        "@maven//:org_junit_jupiter_junit_jupiter_engine",
+        "@maven//:org_junit_platform_junit_platform_launcher",
+        "@maven//:org_junit_platform_junit_platform_reporting",
+        "@maven//:org_slf4j_slf4j_reload4j",
+    ],
+    deps = DEPS + [
+        ":scala-server-utils-test-utils",
+    ],
+)
+
+jvm_junit_test_suite(
+    name = "scala-integration-kafka-coordinator",
+    srcs = glob(["src/test/scala/integration/kafka/coordinator/**/*.scala"]),
+    per_test_args = per_test_args,
+    prefixes = [
+        "src/test/scala/integration/",
+    ],
+    resources = glob(["src/test/resources/**/*"]),
+    tags = [
+        "no-java-checkstyle",
+        "no-java-spotbugs",
+    ],
+    runtime_deps = [
+        "@maven//:io_dropwizard_metrics_metrics_core",
+        "@maven//:org_bouncycastle_bcpkix_jdk18on",
+        "@maven//:org_junit_jupiter_junit_jupiter_engine",
+        "@maven//:org_junit_platform_junit_platform_launcher",
+        "@maven//:org_junit_platform_junit_platform_reporting",
+        "@maven//:org_slf4j_slf4j_reload4j",
+    ],
+    deps = DEPS + [
+        ":scala-server-utils-test-utils",
+    ],
+)
+
+jvm_junit_test_suite(
+    name = "scala-integration-kafka-network",
+    srcs = glob(["src/test/scala/integration/kafka/network/**/*.scala"]),
+    per_test_args = per_test_args,
+    prefixes = [
+        "src/test/scala/integration/",
+    ],
+    resources = glob(["src/test/resources/**/*"]),
+    tags = [
+        "no-java-checkstyle",
+        "no-java-spotbugs",
+    ],
+    runtime_deps = [
+        "@maven//:io_dropwizard_metrics_metrics_core",
+        "@maven//:org_bouncycastle_bcpkix_jdk18on",
+        "@maven//:org_junit_jupiter_junit_jupiter_engine",
+        "@maven//:org_junit_platform_junit_platform_launcher",
+        "@maven//:org_junit_platform_junit_platform_reporting",
+        "@maven//:org_slf4j_slf4j_reload4j",
+    ],
+    deps = DEPS + [
+        ":scala-server-utils-test-utils",
+    ],
+)
+
+jvm_junit_test_suite(
+    name = "scala-integration-kafka-tools",
+    srcs = glob(["src/test/scala/integration/kafka/tools/**/*.scala"]),
+    per_test_args = per_test_args,
+    prefixes = [
+        "src/test/scala/integration/",
+    ],
+    resources = glob(["src/test/resources/**/*"]),
+    tags = [
+        "no-java-checkstyle",
+        "no-java-spotbugs",
+    ],
+    runtime_deps = [
+        "@maven//:io_dropwizard_metrics_metrics_core",
+        "@maven//:org_bouncycastle_bcpkix_jdk18on",
+        "@maven//:org_junit_jupiter_junit_jupiter_engine",
+        "@maven//:org_junit_platform_junit_platform_launcher",
+        "@maven//:org_junit_platform_junit_platform_reporting",
+        "@maven//:org_slf4j_slf4j_reload4j",
+    ],
+    deps = DEPS + [
+        ":scala-server-utils-test-utils",
+    ],
+)
+
+jvm_junit_test_suite(
+    name = "scala-integration-kafka-zk",
+    srcs = glob(["src/test/scala/integration/kafka/zk/**/*.scala"]),
+    per_test_args = per_test_args,
+    prefixes = [
+        "src/test/scala/integration/",
+    ],
+    resources = glob(["src/test/resources/**/*"]),
+    tags = [
+        "no-java-checkstyle",
+        "no-java-spotbugs",
+    ],
+    runtime_deps = [
+        "@maven//:io_dropwizard_metrics_metrics_core",
+        "@maven//:org_bouncycastle_bcpkix_jdk18on",
+        "@maven//:org_junit_jupiter_junit_jupiter_engine",
+        "@maven//:org_junit_platform_junit_platform_launcher",
+        "@maven//:org_junit_platform_junit_platform_reporting",
+        "@maven//:org_slf4j_slf4j_reload4j",
+    ],
+    deps = DEPS + [
+        ":kafka-testkit",
+        ":scala-server-utils-test-utils",
+    ],
+)
+
+# this is a combination of:
+# scala/integration/kafka/server
+# scala/unit/kafka/utils
+# scala/integration/kafka/api
+# scala/unit/kafka/integration
+# scala/kafka/utils
+# scala/kafka/security
+# scala/unit/kafka/zk
+# scala/kafka/server
+# java/kafka/test
+# scala/unit/kafka/admin
+# scala/unit/kafka/server
+# scala/unit/kafka/cluster
+# scala/unit/kafka/log
+# scala/kafka/tier
+# java/kafka/tier
+
+# Future Optimization:
+# There are a bunch of tests that import this just for the Dummy License Validator META-INF file and associated src files.
+# If we break that out, we can improve build avoidance.
+# The "Base" tests also bust the cache a lot. For example changing the BaseAdminIntegrationTest should really only bust
+# like 3-4 tests, but it busts way more, including tests in other modules because this utils module gets imported elsewhere.
+scala_library(
+    name = "scala-server-utils-test-utils",
+    srcs = glob(
+        [
+            "src/test/scala/integration/kafka/server/**/*.scala",
+            "src/test/scala/integration/kafka/api/**/*.scala",
+            "src/test/scala/unit/kafka/utils/**/*.scala",
+            "src/test/scala/unit/kafka/integration/**/*.scala",
+            "src/test/scala/kafka/utils/**/*.scala",
+            "src/test/scala/kafka/security/**/*.scala",
+            "src/test/scala/unit/kafka/zk/**/*.scala",
+            "src/test/scala/kafka/server/**/*.scala",
+            "src/test/java/kafka/metrics/**/*.java",
+            "src/test/java/kafka/test/**/*.java",
+            "src/test/java/kafka/utils/**/*.java",
+            "src/test/scala/unit/kafka/admin/**/*.scala",
+            "src/test/scala/unit/kafka/server/**/*.scala",
+            "src/test/scala/unit/kafka/cluster/**/*.scala",
+            "src/test/scala/unit/kafka/log/**/*.scala",
+            "src/test/scala/kafka/tier/**/*.scala",
+            "src/test/java/kafka/security/**/*.java",
+            "src/test/java/kafka/tier/**/*.java",
+        ],
+        exclude = [
+            "src/test/scala/integration/kafka/server/**/*Test.scala",
+            "src/test/scala/integration/kafka/api/**/*Test.scala",
+            "src/test/scala/unit/kafka/utils/**/*Test.scala",
+            "src/test/scala/unit/kafka/integration/**/*Test.scala",
+            "src/test/scala/kafka/utils/**/*Test.scala",
+            "src/test/scala/kafka/security/**/*Test.scala",
+            "src/test/scala/unit/kafka/zk/**/*Test.scala",
+            "src/test/scala/kafka/server/**/*Test.scala",
+            "src/test/java/kafka/test/**/*Test.java",
+            "src/test/scala/unit/kafka/admin/**/*Test.scala",
+            "src/test/scala/unit/kafka/server/**/*Test.scala",
+            "src/test/scala/unit/kafka/cluster/**/*Test.scala",
+            "src/test/scala/unit/kafka/log/**/*Test.scala",
+            "src/test/scala/kafka/tier/**/*Test.scala",
+            "src/test/java/kafka/tier/**/*Test.java",
+            "src/test/java/kafka/test/JarResourceLoader.java",
+        ],
+    ) + [
+        "src/test/java/kafka/test/annotation/ClusterTest.java",
+        "src/test/scala/integration/kafka/api/AbstractAuthorizerIntegrationTest.scala",
+        "src/test/scala/integration/kafka/api/AbstractConsumerTest.scala",
+        "src/test/scala/integration/kafka/api/AbstractSaslTest.scala",
+        "src/test/scala/integration/kafka/api/BaseAdminIntegrationTest.scala",
+        "src/test/scala/integration/kafka/api/BaseConsumerTest.scala",
+        "src/test/scala/integration/kafka/api/BaseProducerSendTest.scala",
+        "src/test/scala/integration/kafka/api/BaseQuotaTest.scala",
+        "src/test/scala/integration/kafka/api/DelegationTokenEndToEndAuthorizationTest.scala",
+        "src/test/scala/integration/kafka/api/EndToEndAuthorizationTest.scala",
+        "src/test/scala/integration/kafka/api/PlaintextAdminIntegrationTest.scala",
+        "src/test/scala/integration/kafka/api/RebootstrapTest.scala",
+        "src/test/scala/integration/kafka/api/SaslEndToEndAuthorizationTest.scala",
+        "src/test/scala/integration/kafka/api/SaslScramSslEndToEndAuthorizationTest.scala",
+        "src/test/scala/integration/kafka/api/SaslSslAdminIntegrationTest.scala",
+        "src/test/scala/integration/kafka/api/TransactionsTest.scala",
+        "src/test/scala/integration/kafka/server/DynamicBrokerReconfigurationTest.scala",
+        "src/test/scala/integration/kafka/server/MultipleListenersWithSameSecurityProtocolBaseTest.scala",
+        "src/test/scala/unit/kafka/admin/RackAwareTest.scala",
+        "src/test/scala/unit/kafka/cluster/AbstractPartitionTest.scala",
+        "src/test/scala/unit/kafka/cluster/PartitionTest.scala",
+        "src/test/scala/unit/kafka/log/AbstractLogCleanerIntegrationTest.scala",
+        "src/test/scala/unit/kafka/log/LogCleanerTest.scala",
+        "src/test/scala/unit/kafka/log/LogManagerTest.scala",
+        "src/test/scala/unit/kafka/server/AbstractApiVersionsRequestTest.scala",
+        "src/test/scala/unit/kafka/server/AbstractCreateTopicsRequestTest.scala",
+        "src/test/scala/unit/kafka/server/AbstractFetcherThreadTest.scala",
+        "src/test/scala/unit/kafka/server/AbstractMetadataRequestTest.scala",
+        "src/test/scala/unit/kafka/server/AlterUserScramCredentialsRequestTest.scala",
+        "src/test/scala/unit/kafka/server/BaseClientQuotaManagerTest.scala",
+        "src/test/scala/unit/kafka/server/BaseFetchRequestTest.scala",
+        "src/test/scala/unit/kafka/server/BaseRequestTest.scala",
+        "src/test/scala/unit/kafka/server/DescribeUserScramCredentialsRequestTest.scala",
+        "src/test/scala/unit/kafka/server/GroupCoordinatorBaseRequestTest.scala",
+        "src/test/scala/unit/kafka/server/ListOffsetsRequestTest.scala",
+        "src/test/scala/unit/kafka/server/MetadataCacheTest.scala",
+        "src/test/scala/unit/kafka/server/ReplicaFetcherThreadTest.scala",
+        "src/test/scala/unit/kafka/server/epoch/EpochDrivenReplicationProtocolAcceptanceTest.scala",
+    ],
+    resources = glob(["src/test/resources/**/*"]),
+    tags = [
+        "no-java-checkstyle",
+        "no-java-spotbugs",
+    ],
+    deps = DEPS + [
+        "//core:kafka-testkit",
+        "@io_bazel_rules_scala_scala_library//jar",
+        "@maven//:software_amazon_awssdk_aws_core",
+        "@maven//:software_amazon_awssdk_utils",
+    ],
+)
+
+jvm_junit_test_suite(
+    name = "scala-server-utils",
+    srcs = glob(
+        [
+            "src/test/scala/integration/kafka/server/**/*.scala",
+            "src/test/scala/integration/kafka/api/**/*.scala",
+            "src/test/scala/unit/kafka/utils/**/*.scala",
+            "src/test/scala/unit/kafka/integration/**/*.scala",
+            "src/test/scala/kafka/utils/**/*.scala",
+            "src/test/scala/kafka/security/**/*.scala",
+            "src/test/scala/unit/kafka/zk/**/*.scala",
+            "src/test/scala/kafka/server/**/*.scala",
+            "src/test/java/kafka/test/**/*.java",
+            "src/test/scala/unit/kafka/server/**/*.scala",
+            "src/test/scala/unit/kafka/log/**/*.scala",
+            "src/test/scala/kafka/tier/**/*.scala",
+            "src/test/java/kafka/security/**/*.java",
+            "src/test/java/kafka/tier/**/*.java",
+        ],
+        exclude = [
+            "src/test/scala/kafka/server/RemoteLeaderEndPointTest.scala",  # empty file
+            "src/test/java/kafka/test/JarResourceLoader.java",
+        ],
+    ),
+    per_test_args = per_test_args,
+    prefixes = [
+        "src/test/scala/integration/",
+        "src/test/scala/unit/",
+        "src/test/scala/",
+        "src/test/java/",
+    ],
+    # log4j.properties is needed for LoggingTest.scala
+    resources = glob(["src/test/resources/**/*"]),
+    tags = [
+        "no-java-checkstyle",
+        "no-java-spotbugs",
+    ],
+    runtime_deps = [
+        "@maven//:io_dropwizard_metrics_metrics_core",
+        "@maven//:org_bouncycastle_bcpkix_jdk18on",
+        "@maven//:org_junit_jupiter_junit_jupiter_engine",
+        "@maven//:org_junit_platform_junit_platform_launcher",
+        "@maven//:org_junit_platform_junit_platform_reporting",
+        "@maven//:org_slf4j_slf4j_reload4j",
+    ],
+    deps = DEPS + [
+        ":scala-server-utils-test-utils",
+        "//core:kafka-testkit",
+        "//share",
+        "@io_bazel_rules_scala_scala_library//jar",
+        "@maven//:com_github_ben_manes_caffeine_caffeine",
+        "@maven//:commons_io_commons_io",
+        "@maven//:io_projectreactor_reactor_core",
+        "@maven//:org_reactivestreams_reactive_streams",
+        "@maven//:software_amazon_awssdk_aws_core",
+        "@maven//:software_amazon_awssdk_http_client_spi",
+        "@maven//:software_amazon_awssdk_s3",
+        "@maven//:software_amazon_awssdk_sdk_core",
+        "@maven//:software_amazon_awssdk_utils",
+    ],
+)
+
+# the build target for "kafka/test/JarResourceLoader.java"
+# we need to exclude it from the above build unit and
+# make another standalone target for better dependency graph
+java_library(
+    name = "jar-resource-loader",
+    srcs = ["src/test/java/kafka/test/JarResourceLoader.java"],
+    tags = ["no-java-spotbugs"],
+    deps = [
+        "@maven//:commons_io_commons_io",
+    ],
+)

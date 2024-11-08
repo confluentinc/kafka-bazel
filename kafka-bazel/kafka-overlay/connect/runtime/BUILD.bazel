@@ -1,0 +1,282 @@
+load("@contrib_rules_jvm//java:defs.bzl", "java_binary")
+load("//tools-bazel:copy_system_test_jars.bzl", "conditional_copy_dep_jars")
+load("//tools-bazel:library_wrappers.bzl", "java_export", "java_library", "jvm_junit_test_suite")
+load(":generated_test_args.bzl", "per_test_args")
+
+exports_files(["openapi-config.yaml"])
+
+java_export(
+    name = "runtime",
+    srcs = glob(["src/main/**/*.java"]),
+    classifier_artifacts = {
+        "test": ":runtime-test-jar",
+    },
+    maven_coordinates = "org.apache.kafka:connect-runtime:$(maven_version)",
+    resources = glob(["src/main/resources/**"]),
+    runtime_deps_exclude = [
+        "//clients",
+        "//connect/api",
+        "//connect/json",
+        "//connect/transforms",
+    ],
+    tags = ["no-javadocs"],
+    visibility = ["//:__subpackages__"],
+    deps = [
+        "//clients",
+        "//connect/api",
+        "//connect/json",
+        "//connect/transforms",
+        "@maven//:ch_qos_reload4j_reload4j",
+        "@maven//:com_fasterxml_jackson_core_jackson_annotations",
+        "@maven//:com_fasterxml_jackson_core_jackson_core",
+        "@maven//:com_fasterxml_jackson_core_jackson_databind",
+        "@maven//:com_fasterxml_jackson_jaxrs_jackson_jaxrs_json_provider",
+        "@maven//:com_google_guava_guava",
+        "@maven//:io_github_classgraph_classgraph",
+        "@maven//:io_swagger_core_v3_swagger_annotations",
+        "@maven//:jakarta_activation_jakarta_activation_api",
+        "@maven//:jakarta_ws_rs_jakarta_ws_rs_api",
+        "@maven//:jakarta_xml_bind_jakarta_xml_bind_api",
+        "@maven//:javax_servlet_javax_servlet_api",
+        "@maven//:org_apache_maven_maven_artifact",
+        "@maven//:org_bitbucket_b_c_jose4j",
+        "@maven//:org_eclipse_jetty_jetty_client",
+        "@maven//:org_eclipse_jetty_jetty_http",
+        "@maven//:org_eclipse_jetty_jetty_server",
+        "@maven//:org_eclipse_jetty_jetty_servlet",
+        "@maven//:org_eclipse_jetty_jetty_servlets",
+        "@maven//:org_eclipse_jetty_jetty_util",
+        "@maven//:org_glassfish_hk2_external_jakarta_inject",
+        "@maven//:org_glassfish_hk2_hk2_api",
+        "@maven//:org_glassfish_jersey_containers_jersey_container_servlet",
+        "@maven//:org_glassfish_jersey_containers_jersey_container_servlet_core",
+        "@maven//:org_glassfish_jersey_core_jersey_server",
+        "@maven//:org_glassfish_jersey_inject_jersey_hk2",
+        "@maven//:org_reflections_reflections",
+        "@maven//:org_slf4j_slf4j_api",
+    ],
+)
+
+java_library(
+    name = "runtime-test-jar",
+    srcs = glob(["src/test/java/**/*.java"]),
+    resources = glob(["src/test/resources/**/*"]),
+    tags = [
+        "no-java-checkstyle",
+        "no-java-spotbugs",
+    ],
+    deps = [
+        ":runtime",
+        "//clients",
+        "//clients:clients-tests-test-lib",
+        "//connect/api",
+        "//connect/json",
+        "//connect/test-plugins:test-plugins-project",
+        "//connect/transforms",
+        "//core",
+        "//core:jar-resource-loader",
+        "//core:kafka-testkit",
+        "//core:scala-server-utils-test-utils",
+        "//dependencies:easymock",
+        "//dependencies:mockito_core",
+        "//group-coordinator",
+        "//metadata",
+        "//server:server-project",
+        "//server-common",
+        "//storage",
+        "//tools",
+        "@maven//:ch_qos_reload4j_reload4j",
+        "@maven//:com_fasterxml_jackson_core_jackson_annotations",
+        "@maven//:com_fasterxml_jackson_core_jackson_core",
+        "@maven//:com_fasterxml_jackson_core_jackson_databind",
+        "@maven//:com_google_guava_guava",
+        "@maven//:jakarta_ws_rs_jakarta_ws_rs_api",
+        "@maven//:junit_junit",
+        "@maven//:org_apache_httpcomponents_httpclient",
+        "@maven//:org_apache_httpcomponents_httpcore",
+        "@maven//:org_eclipse_jetty_jetty_client",
+        "@maven//:org_eclipse_jetty_jetty_servlet",
+        "@maven//:org_eclipse_jetty_jetty_util",
+        "@maven//:org_hamcrest_hamcrest",
+        "@maven//:org_junit_jupiter_junit_jupiter_api",
+        "@maven//:org_junit_jupiter_junit_jupiter_params",
+        "@maven//:org_mockito_mockito_junit_jupiter",
+        "@maven//:org_powermock_powermock_api_easymock",
+        "@maven//:org_powermock_powermock_core",
+        "@maven//:org_powermock_powermock_module_junit4",
+        "@maven//:org_powermock_powermock_reflect",
+        "@maven//:org_slf4j_slf4j_api",
+    ],
+)
+
+conditional_copy_dep_jars(
+    name = "copy-connect-runtime-dep-jars",
+    libs_target = ":runtime",
+    libs_target_exclude_list = [
+        "//clients",
+        "@maven//:org_bouncycastle_bcpkix_jdk18on",
+        "@maven//:org_bouncycastle_bcprov_jdk18on",
+        "@maven//:org_bouncycastle_bcutil_jdk18on",
+        "@maven//:org_bouncycastle_bc_fips",
+        "//connect/api",
+        "//connect/ce-logs",
+        "//connect/json",
+        "//connect/transforms",
+    ],
+    output_directory = "dependant-libs",
+)
+
+java_binary(
+    name = "ConnectDistributed",
+    main_class = "org.apache.kafka.connect.cli.ConnectDistributed",
+    visibility = ["//visibility:public"],
+    runtime_deps = [":runtime"],
+)
+
+java_binary(
+    name = "ConnectStandalone",
+    main_class = "org.apache.kafka.connect.cli.ConnectStandalone",
+    visibility = ["//visibility:public"],
+    runtime_deps = [":runtime"],
+)
+
+java_binary(
+    name = "ConnectMetrics",
+    main_class = "org.apache.kafka.connect.runtime.ConnectMetrics",
+    visibility = ["//visibility:public"],
+    runtime_deps = [
+        ":runtime",
+        "@maven//:org_slf4j_slf4j_nop",
+    ],
+)
+
+java_binary(
+    name = "SinkConnectorConfig",
+    main_class = "org.apache.kafka.connect.runtime.SinkConnectorConfig",
+    visibility = ["//visibility:public"],
+    runtime_deps = [
+        ":runtime",
+        "@maven//:org_slf4j_slf4j_nop",
+    ],
+)
+
+java_binary(
+    name = "SourceConnectorConfig",
+    main_class = "org.apache.kafka.connect.runtime.SourceConnectorConfig",
+    visibility = ["//visibility:public"],
+    runtime_deps = [
+        ":runtime",
+        "@maven//:org_slf4j_slf4j_nop",
+    ],
+)
+
+java_binary(
+    name = "DistributedConfig",
+    main_class = "org.apache.kafka.connect.runtime.distributed.DistributedConfig",
+    visibility = ["//visibility:public"],
+    runtime_deps = [
+        ":runtime",
+        "@maven//:org_slf4j_slf4j_nop",
+    ],
+)
+
+java_binary(
+    name = "PredicateDoc",
+    main_class = "org.apache.kafka.connect.tools.PredicateDoc",
+    visibility = ["//visibility:public"],
+    runtime_deps = [
+        ":runtime",
+        "@maven//:org_slf4j_slf4j_nop",
+    ],
+)
+
+java_binary(
+    name = "TransformationDoc",
+    main_class = "org.apache.kafka.connect.tools.TransformationDoc",
+    visibility = ["//visibility:public"],
+    runtime_deps = [
+        ":runtime",
+        "@maven//:org_slf4j_slf4j_nop",
+    ],
+)
+
+# Match build.gradle "testsToExclude"
+EXCLUDE_JDK_16 = [
+    "src/test/java/org/apache/kafka/connect/storage/KafkaConfigBackingStoreTest.java",
+    "src/test/java/org/apache/kafka/connect/runtime/WorkerSinkTaskTest.java",
+]
+
+jvm_junit_test_suite(
+    name = "runtime-tests",
+    srcs = glob(
+        ["src/test/java/**/*.java"],
+        exclude = ["src/test/resources/test-plugins/read-version-from-resource-v1/test/plugins/ReadVersionFromResource.java"] +
+                  EXCLUDE_JDK_16,
+    ),
+    additional_library_srcs = [
+        "src/test/java/org/apache/kafka/connect/connector/policy/BaseConnectorClientConfigOverridePolicyTest.java",
+        "src/test/java/org/apache/kafka/connect/converters/NumberConverterTest.java",
+        "src/test/java/org/apache/kafka/connect/integration/BlockingConnectorTest.java",
+        "src/test/java/org/apache/kafka/connect/integration/ExampleConnectIntegrationTest.java",
+        "src/test/java/org/apache/kafka/connect/runtime/ConnectorConfigTest.java",
+        "src/test/java/org/apache/kafka/connect/runtime/errors/RetryWithToleranceOperatorTest.java",
+        "src/test/java/org/apache/kafka/connect/runtime/isolation/DelegatingClassLoaderTest.java",
+        "src/test/java/org/apache/kafka/connect/runtime/isolation/PluginsTest.java",
+    ],
+    per_test_args = per_test_args,
+    resources = glob(["src/test/resources/**/*"]),
+    tags = ["no-java-spotbugs"],
+    visibility = ["//visibility:public"],
+    runtime_deps = [
+        "@maven//:org_bouncycastle_bcpkix_jdk18on",
+        "@maven//:org_junit_jupiter_junit_jupiter_engine",
+        "@maven//:org_junit_platform_junit_platform_launcher",
+        "@maven//:org_junit_platform_junit_platform_reporting",
+        "@maven//:org_junit_vintage_junit_vintage_engine",
+        "@maven//:org_slf4j_slf4j_reload4j",
+    ],
+    deps = [
+        ":runtime",
+        "//clients",
+        "//clients:clients-tests-test-lib",
+        "//connect/api",
+        "//connect/json",
+        "//connect/test-plugins",
+        "//connect/transforms",
+        "//core",
+        "//core:core-test-jar-java",
+        "//core:jar-resource-loader",
+        "//core:scala-server-utils-test-utils",
+        "//core:scala-unit-kafka-cluster-test-lib",
+        "//dependencies:easymock",
+        "//dependencies:mockito_core",
+        "//group-coordinator",
+        "//metadata",
+        "//server",
+        "//server-common",
+        "//storage",
+        "@maven//:ch_qos_reload4j_reload4j",
+        "@maven//:com_fasterxml_jackson_core_jackson_annotations",
+        "@maven//:com_fasterxml_jackson_core_jackson_core",
+        "@maven//:com_fasterxml_jackson_core_jackson_databind",
+        "@maven//:com_google_guava_guava",
+        "@maven//:io_dropwizard_metrics_metrics_core",
+        "@maven//:jakarta_ws_rs_jakarta_ws_rs_api",
+        "@maven//:jakarta_xml_bind_jakarta_xml_bind_api",
+        "@maven//:junit_junit",
+        "@maven//:org_apache_httpcomponents_httpclient",
+        "@maven//:org_apache_httpcomponents_httpcore",
+        "@maven//:org_eclipse_jetty_jetty_client",
+        "@maven//:org_eclipse_jetty_jetty_servlet",
+        "@maven//:org_eclipse_jetty_jetty_util",
+        "@maven//:org_hamcrest_hamcrest",
+        "@maven//:org_junit_jupiter_junit_jupiter_api",
+        "@maven//:org_junit_jupiter_junit_jupiter_params",
+        "@maven//:org_mockito_mockito_junit_jupiter",
+        "@maven//:org_powermock_powermock_api_easymock",
+        "@maven//:org_powermock_powermock_core",
+        "@maven//:org_powermock_powermock_module_junit4",
+        "@maven//:org_powermock_powermock_reflect",
+        "@maven//:org_slf4j_slf4j_api",
+    ],
+)
