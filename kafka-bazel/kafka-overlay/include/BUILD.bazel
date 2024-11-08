@@ -1,0 +1,56 @@
+load("@rules_pkg//pkg:mappings.bzl", "pkg_attributes", "pkg_filegroup", "pkg_files", "strip_prefix")
+load("@rules_pkg//pkg:tar.bzl", "pkg_tar")
+
+include_755_srcs = glob(
+    [
+        "opt/caas/bin/**/*",
+    ],
+    exclude = ["BUILD.bazel"],
+)
+
+pkg_files(
+    name = "include_755",
+    srcs = include_755_srcs,
+    attributes = pkg_attributes(
+        gid = 0,
+        group = "root",
+        mode = "0755",
+        uid = 0,
+        user = "root",
+    ),
+    strip_prefix = strip_prefix.from_pkg(),
+)
+
+pkg_files(
+    name = "include_644",
+    srcs = glob(
+        ["**/*"],
+        exclude = ["BUILD.bazel"] + include_755_srcs,
+    ),
+    attributes = pkg_attributes(
+        gid = 0,
+        group = "root",
+        mode = "0644",
+        uid = 0,
+        user = "root",
+    ),
+    strip_prefix = strip_prefix.from_pkg(),
+)
+
+pkg_filegroup(
+    name = "include",
+    srcs = [
+        ":include_644",
+        ":include_755",
+    ],
+    visibility = ["//:__subpackages__"],
+)
+
+pkg_tar(
+    name = "include_tar",
+    srcs = [
+        ":include_644",
+        ":include_755",
+    ],
+    visibility = ["//visibility:public"],
+)

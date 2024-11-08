@@ -1,0 +1,90 @@
+load("//tools-bazel:copy_system_test_jars.bzl", "conditional_copy_dep_jars")
+load("//tools-bazel:library_wrappers.bzl", "java_export", "java_library", "jvm_junit_test_suite")
+load(":generated_test_args.bzl", "per_test_args")
+
+java_export(
+    name = "basic-auth-extension",
+    srcs = glob(["src/main/**/*.java"]),
+    classifier_artifacts = {
+        "test": ":basic-auth-extension-test-jar",
+    },
+    maven_coordinates = "org.apache.kafka:connect-basic-auth-extension:$(maven_version)",
+    resources = glob(["src/main/resources/**/*"]),
+    tags = ["no-javadocs"],
+    visibility = ["//:__subpackages__"],
+    deps = [
+        "//clients",
+        "//connect/api",
+        "@maven//:jakarta_annotation_jakarta_annotation_api",
+        "@maven//:jakarta_ws_rs_jakarta_ws_rs_api",
+        "@maven//:org_slf4j_slf4j_api",
+    ],
+)
+
+java_library(
+    name = "basic-auth-extension-test-jar",
+    srcs = glob(["src/test/java/**/*.java"]),
+    resources = glob(["src/test/resources/**/*"]),
+    tags = [
+        "no-java-checkstyle",
+        "no-java-spotbugs",
+    ],
+    deps = [
+        ":basic-auth-extension",
+        "//clients",
+        "//clients:clients-tests-test-lib",
+        "//connect/api",
+        "//dependencies:mockito_core",
+        "@maven//:jakarta_ws_rs_jakarta_ws_rs_api",
+        "@maven//:org_junit_jupiter_junit_jupiter_api",
+    ],
+)
+
+conditional_copy_dep_jars(
+    name = "copy-connect-basic-auth-extension-dep-jars",
+    libs_target = ":basic-auth-extension",
+    libs_target_exclude_list = [
+        "//clients",
+        "//connect/api",
+        "@maven//:org_bouncycastle_bcpkix_jdk18on",
+        "@maven//:org_bouncycastle_bcprov_jdk18on",
+        "@maven//:org_bouncycastle_bcutil_jdk18on",
+        "@maven//:org_bouncycastle_bc_fips",
+    ],
+    output_directory = "dependant-libs",
+    testlibs_target = [":basic-auth-extension-test-jar"],
+    testlibs_target_exclude_list = [
+        "@maven//:org_bouncycastle_bcpkix_jdk18on",
+        "@maven//:org_bouncycastle_bcprov_jdk18on",
+        "@maven//:org_bouncycastle_bcutil_jdk18on",
+        "@maven//:org_bouncycastle_bc_fips",
+    ],
+    testlibs_target_include_list = [
+        "@maven//:ch_qos_reload4j_reload4j",
+    ],
+)
+
+jvm_junit_test_suite(
+    name = "basic-auth-extension-tests",
+    srcs = [
+        "src/test/java/org/apache/kafka/connect/rest/basic/auth/extension/BasicAuthSecurityRestExtensionTest.java",
+        "src/test/java/org/apache/kafka/connect/rest/basic/auth/extension/JaasBasicAuthFilterTest.java",
+    ],
+    per_test_args = per_test_args,
+    tags = ["no-java-spotbugs"],
+    runtime_deps = [
+        "@maven//:org_junit_jupiter_junit_jupiter_engine",
+        "@maven//:org_junit_platform_junit_platform_launcher",
+        "@maven//:org_junit_platform_junit_platform_reporting",
+    ],
+    deps = [
+        ":basic-auth-extension",
+        "//clients",
+        "//clients:clients-tests-test-lib",
+        "//connect/api",
+        "//dependencies:mockito_core",
+        "@maven//:jakarta_ws_rs_jakarta_ws_rs_api",
+        "@maven//:org_glassfish_jersey_core_jersey_common",
+        "@maven//:org_junit_jupiter_junit_jupiter_api",
+    ],
+)

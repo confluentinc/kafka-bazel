@@ -1,0 +1,4 @@
+resourcePackages:
+  - org.apache.kafka.connect.runtime.rest.resources
+prettyPrint: true
+sortOutput: true

@@ -1,0 +1,131 @@
+load("@apple_rules_lint//lint:defs.bzl", "package_lint_config")
+load("//tools-bazel:library_wrappers.bzl", "java_export", "java_library", "jvm_junit_test_suite")
+load("//tools-bazel:message_generator.bzl", "message_generator")
+load(":generated_test_args.bzl", "per_test_args")
+
+package_lint_config({
+    "java-checkstyle": "//checkstyle:checkstyle_config_storage",
+})
+
+message_generator(
+    name = "generated",
+    srcs = glob(["src/main/resources/message/*.json"]),
+    args = [
+        "-p",
+        "org.apache.kafka.server.log.remote.metadata.storage.generated",
+        "-o",
+        "generated/srcs",
+        "-i",
+        "storage/src/main/resources/message",
+        "-m",
+        "MessageDataGenerator",
+        "JsonConverterGenerator",
+        "-t",
+        "MetadataRecordTypeGenerator",
+        "MetadataJsonConvertersGenerator",
+    ],
+)
+
+java_export(
+    name = "storage",
+    srcs = glob(["src/main/java/**/*.java"]) + [":generated"],
+    classifier_artifacts = {
+        "test": ":storage-test-jar",
+    },
+    maven_coordinates = "org.apache.kafka:kafka-storage:$(maven_version)",
+    neverlink_option = True,
+    resources = glob(["src/main/resources/**/*"]) + ["//:version_file"],
+    tags = ["no-javadocs"],
+    visibility = ["//:__subpackages__"],
+    deps = [
+        "//clients",
+        "//server-common",
+        "//storage/api",
+        "@maven//:com_fasterxml_jackson_core_jackson_annotations",
+        "@maven//:com_fasterxml_jackson_core_jackson_databind",
+        "@maven//:com_github_ben_manes_caffeine_caffeine",
+        "@maven//:com_google_flatbuffers_flatbuffers_java",
+        "@maven//:com_yammer_metrics_metrics_core",
+        "@maven//:net_sourceforge_argparse4j_argparse4j",
+        "@maven//:org_slf4j_slf4j_api",
+    ],
+)
+
+java_library(
+    name = "storage-test-jar",
+    srcs = glob(["src/test/java/**/*.java"]),
+    resources = glob(["src/test/resources/**/*"]),
+    tags = [
+        "no-java-checkstyle",
+        "no-java-spotbugs",
+    ],
+    deps = [
+        ":storage",
+        "//clients",
+        "//clients:clients-tests-test-lib",
+        "//core",
+        "//core:scala-server-utils-test-utils",
+        "//dependencies:mockito_core",
+        "//server:server-project",
+        "//server-common",
+        "//server-common:server-common-tests-test-lib",
+        "//storage/api",
+        "//transaction-coordinator",
+        "@io_bazel_rules_scala_scala_library//jar",
+        "@maven//:org_hamcrest_hamcrest",
+        "@maven//:org_jetbrains_annotations",
+        "@maven//:org_junit_jupiter_junit_jupiter_api",
+        "@maven//:org_junit_jupiter_junit_jupiter_params",
+        "@maven//:org_junit_platform_junit_platform_commons",
+        "@maven//:org_slf4j_slf4j_api",
+    ],
+)
+
+java_binary(
+    name = "LogConfig",
+    main_class = "org.apache.kafka.storage.internals.log.LogConfig",
+    visibility = ["//visibility:public"],
+    runtime_deps = [
+        ":storage",
+        "@maven//:org_slf4j_slf4j_nop",
+    ],
+)
+
+jvm_junit_test_suite(
+    name = "storage-tests",
+    srcs = glob(["src/test/**/*.java"]),
+    additional_library_srcs = [
+        "src/test/java/org/apache/kafka/tiered/storage/integration/BaseDeleteSegmentsTest.java",
+        "src/test/java/org/apache/kafka/tiered/storage/integration/BaseReassignReplicaTest.java",
+    ],
+    per_test_args = per_test_args,
+    prefixes = ["src/test/java/"],
+    tags = ["no-java-spotbugs"],
+    visibility = ["//visibility:public"],
+    runtime_deps = [
+        "@maven//:org_junit_jupiter_junit_jupiter_engine",
+        "@maven//:org_junit_platform_junit_platform_launcher",
+        "@maven//:org_junit_platform_junit_platform_reporting",
+    ],
+    deps = [
+        ":storage",
+        "//clients",
+        "//clients:clients-tests-test-lib",
+        "//core",
+        "//core:scala-server-utils-test-utils",
+        "//dependencies:mockito_core",
+        "//server:server-project",
+        "//server-common",
+        "//server-common:server-common-tests-test-lib",
+        "//storage/api",
+        "//transaction-coordinator",
+        "@io_bazel_rules_scala_scala_library//jar",
+        "@maven//:io_dropwizard_metrics_metrics_core",
+        "@maven//:org_hamcrest_hamcrest",
+        "@maven//:org_jetbrains_annotations",
+        "@maven//:org_junit_jupiter_junit_jupiter_api",
+        "@maven//:org_junit_jupiter_junit_jupiter_params",
+        "@maven//:org_junit_platform_junit_platform_commons",
+        "@maven//:org_slf4j_slf4j_api",
+    ],
+)

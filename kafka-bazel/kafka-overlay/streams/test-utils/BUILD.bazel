@@ -1,0 +1,81 @@
+load("//tools-bazel:copy_system_test_jars.bzl", "conditional_copy_dep_jars")
+load("//tools-bazel:library_wrappers.bzl", "java_export", "java_library", "jvm_junit_test_suite")
+load(":generated_test_args.bzl", "per_test_args")
+
+java_export(
+    name = "test-utils",
+    srcs = glob(["src/main/**/*.java"]),
+    classifier_artifacts = {
+        "test": ":test-utils-test-jar",
+    },
+    maven_coordinates = "org.apache.kafka:kafka-streams-test-utils:$(maven_version)",
+    resources = glob(["src/main/resources/**/*"]),
+    runtime_deps_exclude = [
+        "//clients",
+        "//streams",
+    ],
+    tags = ["no-javadocs"],
+    visibility = ["//:__subpackages__"],
+    deps = [
+        "//clients",
+        "//streams",
+        "@maven//:org_slf4j_slf4j_api",
+    ],
+)
+
+java_library(
+    name = "test-utils-test-jar",
+    srcs = glob(["src/test/java/**/*.java"]),
+    resources = glob(["src/test/resources/**/*"]),
+    tags = [
+        "no-java-checkstyle",
+        "no-java-spotbugs",
+    ],
+    deps = [
+        ":test-utils",
+        "//clients",
+        "//clients:clients-tests-test-lib",
+        "//dependencies:mockito_core",
+        "//streams",
+        "@maven//:org_hamcrest_hamcrest",
+        "@maven//:org_junit_jupiter_junit_jupiter_api",
+        "@maven//:org_junit_jupiter_junit_jupiter_params",
+    ],
+)
+
+conditional_copy_dep_jars(
+    name = "copy-streams-test-utils-dep-jars",
+    include_scala_version = True,
+    libs_target = ":test-utils",
+    libs_target_exclude_list = ["//streams"],
+    output_directory = "dependant-libs",
+)
+
+jvm_junit_test_suite(
+    name = "test-utils-tests",
+    srcs = glob(
+        ["src/test/**/*.java"],
+    ),
+    additional_library_srcs = [
+        "src/test/java/org/apache/kafka/streams/TopologyTestDriverTest.java",
+    ],
+    per_test_args = per_test_args,
+    resources = glob(["src/test/resources/**/*"]),
+    tags = ["no-java-spotbugs"],
+    runtime_deps = [
+        "@maven//:org_junit_jupiter_junit_jupiter_engine",
+        "@maven//:org_junit_platform_junit_platform_launcher",
+        "@maven//:org_junit_platform_junit_platform_reporting",
+    ],
+    deps = [
+        ":test-utils",
+        "//clients",
+        "//clients:clients-tests-test-lib",
+        "//dependencies:mockito_core",
+        "//streams",
+        "//streams:streams-tests-test-lib",
+        "@maven//:org_hamcrest_hamcrest",
+        "@maven//:org_junit_jupiter_junit_jupiter_api",
+        "@maven//:org_junit_jupiter_junit_jupiter_params",
+    ],
+)

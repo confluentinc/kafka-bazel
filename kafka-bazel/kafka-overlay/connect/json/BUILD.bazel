@@ -1,0 +1,96 @@
+load("//tools-bazel:copy_system_test_jars.bzl", "conditional_copy_dep_jars")
+load("//tools-bazel:library_wrappers.bzl", "java_export", "java_library", "jvm_junit_test_suite")
+load(":generated_test_args.bzl", "per_test_args")
+
+java_export(
+    name = "json",
+    srcs = glob(["src/main/**/*.java"]),
+    classifier_artifacts = {
+        "test": ":json-test-jar",
+    },
+    maven_coordinates = "org.apache.kafka:connect-json:$(maven_version)",
+    resources = glob(["src/main/resources/**"]),
+    runtime_deps_exclude = [
+        "//clients",
+        "//connect/api",
+        "@maven//:com_fasterxml_jackson_core_jackson_core",
+        "@maven//:com_fasterxml_jackson_core_jackson_databind",
+        "@maven//:com_fasterxml_jackson_datatype_jackson_datatype_jdk8",
+        "@maven//:com_fasterxml_jackson_module_jackson_module_afterburner",
+    ],
+    tags = ["no-javadocs"],
+    visibility = ["//:__subpackages__"],
+    deps = [
+        "//clients",
+        "//connect/api",
+        "@maven//:com_fasterxml_jackson_core_jackson_core",
+        "@maven//:com_fasterxml_jackson_core_jackson_databind",
+        "@maven//:com_fasterxml_jackson_datatype_jackson_datatype_jdk8",
+        "@maven//:com_fasterxml_jackson_module_jackson_module_afterburner",
+        "@maven//:org_slf4j_slf4j_api",
+    ],
+)
+
+java_library(
+    name = "json-test-jar",
+    srcs = glob(["src/test/java/**/*.java"]),
+    resources = glob(["src/test/resources/**/*"]),
+    tags = [
+        "no-java-checkstyle",
+        "no-java-spotbugs",
+    ],
+    deps = [
+        ":json",
+        "//clients",
+        "//connect/api",
+        "//core:jar-resource-loader",
+        "@maven//:com_fasterxml_jackson_core_jackson_databind",
+        "@maven//:org_junit_jupiter_junit_jupiter_api",
+    ],
+)
+
+conditional_copy_dep_jars(
+    name = "connect-json-copy-dep-jars",
+    libs_target = ":json",
+    libs_target_exclude_list = [
+        "//clients",
+        "@maven//:org_bouncycastle_bcpkix_jdk18on",
+        "@maven//:org_bouncycastle_bcprov_jdk18on",
+        "@maven//:org_bouncycastle_bcutil_jdk18on",
+        "@maven//:org_bouncycastle_bc_fips",
+        "//connect/api",
+    ],
+    output_directory = "dependant-libs",
+    testlibs_target = [":json-test-jar"],
+    testlibs_target_exclude_list = [
+        "@maven//:org_bouncycastle_bcpkix_jdk18on",
+        "@maven//:org_bouncycastle_bcprov_jdk18on",
+        "@maven//:org_bouncycastle_bcutil_jdk18on",
+        "@maven//:org_bouncycastle_bc_fips",
+    ],
+    testlibs_target_include_list = [
+        "@maven//:ch_qos_reload4j_reload4j",
+    ],
+)
+
+jvm_junit_test_suite(
+    name = "json-tests",
+    srcs = glob(["src/test/**/*.java"]),
+    per_test_args = per_test_args,
+    resources = glob(["src/test/resources/**/*"]),
+    tags = ["no-java-spotbugs"],
+    runtime_deps = [
+        "@maven//:org_junit_jupiter_junit_jupiter_engine",
+        "@maven//:org_junit_platform_junit_platform_launcher",
+        "@maven//:org_junit_platform_junit_platform_reporting",
+    ],
+    deps = [
+        ":json",
+        "//clients",
+        "//connect/api",
+        "//core:jar-resource-loader",
+        "@maven//:com_fasterxml_jackson_core_jackson_databind",
+        "@maven//:org_junit_jupiter_junit_jupiter_api",
+        "@maven//:org_slf4j_slf4j_reload4j",
+    ],
+)

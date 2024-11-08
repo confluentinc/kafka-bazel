@@ -1,0 +1,9 @@
+exports_files(
+    [
+        "test_diff.sh",
+        "empty_report_jar.diff",
+        "empty_report_file.diff",
+        "compare_jar.sh",
+    ],
+    visibility = ["//visibility:public"],
+)

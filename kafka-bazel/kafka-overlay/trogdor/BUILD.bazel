@@ -1,0 +1,128 @@
+load("@contrib_rules_jvm//java:defs.bzl", "java_binary")
+load("//tools-bazel:copy_system_test_jars.bzl", "conditional_copy_dep_jars")
+load("//tools-bazel:library_wrappers.bzl", "java_export", "java_library", "jvm_junit_test_suite")
+load(":generated_test_args.bzl", "per_test_args")
+
+java_export(
+    name = "trogdor",
+    srcs = glob(["src/main/**/*.java"]),
+    classifier_artifacts = {
+        "test": ":trogdor-test-jar",
+    },
+    maven_coordinates = "org.apache.kafka:trogdor:$(maven_version)",
+    tags = ["no-javadocs"],
+    visibility = ["//:__subpackages__"],
+    deps = [
+        "//clients",
+        "@maven//:com_fasterxml_jackson_core_jackson_annotations",
+        "@maven//:com_fasterxml_jackson_core_jackson_core",
+        "@maven//:com_fasterxml_jackson_core_jackson_databind",
+        "@maven//:com_fasterxml_jackson_datatype_jackson_datatype_jdk8",
+        "@maven//:com_fasterxml_jackson_jaxrs_jackson_jaxrs_json_provider",
+        "@maven//:com_squareup_okio_okio",
+        "@maven//:io_kubernetes_client_java",
+        "@maven//:io_kubernetes_client_java_api",
+        "@maven//:io_prometheus_simpleclient",
+        "@maven//:io_prometheus_simpleclient_httpserver",
+        "@maven//:jakarta_activation_jakarta_activation_api",
+        "@maven//:jakarta_ws_rs_jakarta_ws_rs_api",
+        "@maven//:jakarta_xml_bind_jakarta_xml_bind_api",
+        "@maven//:javax_servlet_javax_servlet_api",
+        "@maven//:net_sourceforge_argparse4j_argparse4j",
+        "@maven//:org_apache_commons_commons_compress",
+        "@maven//:org_eclipse_jetty_jetty_server",
+        "@maven//:org_eclipse_jetty_jetty_servlet",
+        "@maven//:org_eclipse_jetty_jetty_servlets",
+        "@maven//:org_glassfish_jersey_containers_jersey_container_servlet",
+        "@maven//:org_glassfish_jersey_containers_jersey_container_servlet_core",
+        "@maven//:org_glassfish_jersey_core_jersey_server",
+        "@maven//:org_glassfish_jersey_inject_jersey_hk2",
+        "@maven//:org_slf4j_slf4j_api",
+    ],
+)
+
+java_library(
+    name = "trogdor-test-jar",
+    srcs = glob(["src/test/java/**/*.java"]),
+    resources = glob(["src/test/resources/**/*"]),
+    tags = [
+        "no-java-checkstyle",
+        "no-java-spotbugs",
+    ],
+    deps = [
+        ":trogdor",
+        "//clients",
+        "//clients:clients-tests-test-lib",
+        "//dependencies:mockito_core",
+        "@maven//:com_fasterxml_jackson_core_jackson_annotations",
+        "@maven//:com_fasterxml_jackson_core_jackson_core",
+        "@maven//:com_fasterxml_jackson_core_jackson_databind",
+        "@maven//:jakarta_ws_rs_jakarta_ws_rs_api",
+        "@maven//:org_junit_jupiter_junit_jupiter_api",
+        "@maven//:org_slf4j_slf4j_api",
+    ],
+)
+
+conditional_copy_dep_jars(
+    name = "copy-trogdor-dep-jars",
+    include_scala_version = True,
+    libs_target = ":trogdor",
+    libs_target_exclude_list = ["//clients"],
+    output_directory = "dependant-libs",
+    testlibs_target = [":trogdor-test-jar"],
+    testlibs_target_include_list = [
+        "@maven//:ch_qos_reload4j_reload4j",
+    ],
+)
+
+java_binary(
+    name = "Agent",
+    main_class = "org.apache.kafka.trogdor.agent.Agent",
+    visibility = ["//visibility:public"],
+    runtime_deps = [":trogdor"],
+)
+
+java_binary(
+    name = "AgentClient",
+    main_class = "org.apache.kafka.trogdor.agent.AgentClient",
+    visibility = ["//visibility:public"],
+    runtime_deps = [":trogdor"],
+)
+
+java_binary(
+    name = "Coordinator",
+    main_class = "org.apache.kafka.trogdor.coordinator.Coordinator",
+    visibility = ["//visibility:public"],
+    runtime_deps = [":trogdor"],
+)
+
+java_binary(
+    name = "CoordinatorClient",
+    main_class = "org.apache.kafka.trogdor.coordinator.CoordinatorClient",
+    visibility = ["//visibility:public"],
+    runtime_deps = [":trogdor"],
+)
+
+jvm_junit_test_suite(
+    name = "trogdor-tests",
+    srcs = glob(["src/test/**/*.java"]),
+    per_test_args = per_test_args,
+    tags = ["no-java-spotbugs"],
+    runtime_deps = [
+        "@maven//:org_junit_jupiter_junit_jupiter_engine",
+        "@maven//:org_junit_platform_junit_platform_launcher",
+        "@maven//:org_junit_platform_junit_platform_reporting",
+    ],
+    deps = [
+        ":trogdor",
+        "//clients",
+        "//clients:clients-tests-test-lib",
+        "//dependencies:mockito_core",
+        "@maven//:com_fasterxml_jackson_core_jackson_annotations",
+        "@maven//:com_fasterxml_jackson_core_jackson_core",
+        "@maven//:com_fasterxml_jackson_core_jackson_databind",
+        "@maven//:jakarta_ws_rs_jakarta_ws_rs_api",
+        "@maven//:org_junit_jupiter_junit_jupiter_api",
+        "@maven//:org_slf4j_slf4j_api",
+    ],
+)

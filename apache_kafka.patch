@@ -1,0 +1,56 @@
+diff --git a/checkstyle/suppressions.xml b/checkstyle/suppressions.xml
+index df79a17ccb..d4dadede97 100644
+--- a/checkstyle/suppressions.xml
++++ b/checkstyle/suppressions.xml
+@@ -26,6 +26,10 @@
+     <!-- Generator -->
+     <suppress checks="CyclomaticComplexity|BooleanExpressionComplexity"
+               files="(SchemaGenerator|MessageDataGenerator|FieldSpec|FieldType).java"/>
++    <suppress checks="FileTabCharacter"
++              files="(generated).srcjar"/>
++    <suppress checks="Header"
++              files="(generated).srcjar"/>
+     <suppress checks="NPathComplexity"
+               files="(MessageDataGenerator|FieldSpec|WorkerSinkTask).java"/>
+     <suppress checks="JavaNCSS"
+diff --git a/gradle/spotbugs-exclude.xml b/gradle/spotbugs-exclude.xml
+index bf540c4d7a..a617dd1d02 100644
+--- a/gradle/spotbugs-exclude.xml
++++ b/gradle/spotbugs-exclude.xml
+@@ -327,6 +327,15 @@ For a detailed description of spotbugs bug categories, see https://spotbugs.read
+         <Bug pattern="MS_MUTABLE_ARRAY"/>
+     </Match>
+ 
++        <Match>
++        <!-- Suppress warnings about generated schema arrays. -->
++        <Or>
++            <Package name="org.apache.kafka.coordinator.group.classic"/>
++        </Or>
++        <Bug pattern="MS_MUTABLE_ARRAY"/>
++    </Match>
++
++
+     <Match>
+         <!-- Suppress warnings about ignoring the return value of await.
+              This is done intentionally because we use other clues to determine
+@@ -385,6 +394,20 @@ For a detailed description of spotbugs bug categories, see https://spotbugs.read
+         <Bug pattern="SF_SWITCH_NO_DEFAULT"/>
+     </Match>
+ 
++    <Match>
++        <!-- Suppress a warning about intentional missing default case. -->
++        <Class name="org.apache.kafka.metadata.authorizer.StandardAuthorizerData"/>
++        <Method name="logAuditMessage"/>
++        <Bug pattern="SF_SWITCH_NO_DEFAULT"/>
++    </Match>
++
++    <Match>
++        <!-- Suppress a warning about intentional missing default case. -->
++        <Class name="org.apache.kafka.controller.ConfigurationControlManager"/>
++        <Method name="incrementalAlterConfigResource"/>
++        <Bug pattern="SF_SWITCH_NO_DEFAULT"/>
++    </Match>
++
+     <Match>
+         <!-- Suppress a warning about intentional missing default cases and fallthroughs. -->
+         <Class name="org.apache.kafka.common.utils.Utils"/>

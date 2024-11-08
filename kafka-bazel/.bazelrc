@@ -1,0 +1,84 @@
+### START SERVICE BOT MANAGED SECTION ###
+### END SERVICE BOT MANAGED SECTION ###
+try-import %workspace%/.bazel/bazelrc/ci.bazelrc
+import %workspace%/.bazel/bazelrc/common.bazelrc
+import %workspace%/.bazel/bazelrc/java.bazelrc
+
+### YOUR USER SPECIFIC SETTINGS GO HERE ###
+build --protocopt=--experimental_allow_proto3_optional
+
+build --jvmopt="--add-opens=java.base/java.io=ALL-UNNAMED"
+build --jvmopt="--add-opens=java.base/java.lang=ALL-UNNAMED"
+build --jvmopt="--add-opens=java.base/java.lang.reflect=ALL-UNNAMED"
+build --jvmopt="--add-opens=java.base/java.nio=ALL-UNNAMED"
+build --jvmopt="--add-opens=java.base/java.nio.file=ALL-UNNAMED"
+build --jvmopt="--add-opens=java.base/java.security=ALL-UNNAMED"
+build --jvmopt="--add-opens=java.base/java.util=ALL-UNNAMED"
+build --jvmopt="--add-opens=java.base/java.util.concurrent=ALL-UNNAMED"
+build --jvmopt="--add-opens=java.base/java.util.concurrent.atomic=ALL-UNNAMED"
+build --jvmopt="--add-opens=java.base/java.util.regex=ALL-UNNAMED"
+build --jvmopt="--add-opens=java.base/java.util.stream=ALL-UNNAMED"
+build --jvmopt="--add-opens=java.base/java.text=ALL-UNNAMED"
+build --jvmopt="--add-opens=java.base/java.time=ALL-UNNAMED"
+build --jvmopt="--add-opens=java.naming/com.sun.jndi.ldap=ALL-UNNAMED"
+build --jvmopt="--add-opens=java.security.jgss/sun.security.krb5=ALL-UNNAMED"
+build --jvmopt="--add-opens=java.base/sun.net.www.protocol.jar=ALL-UNNAMED"
+build --jvmopt=-Djava.security.manager=allow
+
+build --strategy=Javac=worker
+build --strategy=Scalac=worker
+build --worker_sandboxing
+# Coverage
+coverage --test_tag_filters=-exclude,-lint
+coverage --instrumentation_filter="-.*(test|tests),.*-lib$"
+# Fix for bytebuddy issue on linux
+# https://(broken link)+kafka#java.lang.IllegalStateException%3A-Could-not-initialize-plugin%3A-interface-org.mockito.plugins.MockMaker-(alternate%3A-null)-%E2%9C%85
+build --incompatible_sandbox_hermetic_tmp
+
+common --define maven_version=7.9.0-0-ce
+common --define use_fips_boring_ssl=false
+common --define=packageMetricsReporter=true
+common --output_filter="^//"
+
+# This tells Bazel how to interact with the version control system
+# Enable this with --config=release
+build:release --stamp --workspace_status_command=tools-bazel/bazel_stamp_vars.sh
+
+# Definition of --config=java<version>_scala<version>
+common:java11_scala212 --config=java11 --config=scala212
+common:java11_scala213 --config=java11
+common:java17_scala212 --config=java17 --config=scala212
+common:java17_scala213 --config=java17
+common:java21_scala212 --config=scala212
+
+# easymock version
+common:java11 --define=easymock_version=4.3
+common --define=easymock_version=5.2.0
+
+# mockito version
+common:scala212 --define=mockito_version=4.9.0
+common --define=mockito_version=5.10.0
+
+# override_repository
+common:scala212 --override_repository=scala_multiverse=%workspace%/kafka-overlay/scala_tools/local_repos/scala_2_12
+common --override_repository=scala_multiverse=%workspace%/kafka-overlay/scala_tools/local_repos/default
+
+# scala variable
+common:scala212 --define=scala_version=2.12 --repo_env=SCALA_VERSION=2.12.18
+common:scala213 --define=scala_version=2.13 --repo_env=SCALA_VERSION=2.13.14
+
+# defaut test attempts for flaky tests
+test --flaky_test_attempts=2
+
+### START SERVICE BOT MANAGED FOOTER ###
+try-import ".bazelrc.release-version"
+### END SERVICE BOT MANAGED FOOTER ###
+
+### YOUR USER SPECIFIC SETTINGS GO HERE ###
+try-import %workspace%/user.bazelrc
+
+
+# build --experimental_fetch_all_coverage_outputs
+# build --experimental_split_coverage_postprocessing
+# build --remote_download_regex=.*/test.xml
+# build --test_output=errors

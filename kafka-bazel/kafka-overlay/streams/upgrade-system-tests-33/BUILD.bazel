@@ -1,0 +1,11 @@
+load("//tools-bazel:library_wrappers.bzl", "java_library")
+
+java_library(
+    name = "kafka-streams-upgrade-system-tests-33",
+    srcs = glob(["src/test/**/*.java"]),
+    tags = ["no-java-spotbugs"],
+    deps = [
+        "@maven_kafka_streams_33//:org_apache_kafka_kafka_clients",
+        "@maven_kafka_streams_33//:org_apache_kafka_kafka_streams",
+    ],
+)

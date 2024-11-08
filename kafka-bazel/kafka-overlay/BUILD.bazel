@@ -1,0 +1,211 @@
+load("//rules/jvm:release_tar.bzl", "pkg_java_library")
+load("@container_structure_test//:defs.bzl", "container_structure_test")
+load("@rules_multirun//:defs.bzl", "command", "multirun")
+load("@rules_oci//oci:defs.bzl", "oci_image", "oci_image_index", "oci_load", "oci_push")
+load("@rules_pkg//pkg:mappings.bzl", "pkg_attributes", "pkg_files", "strip_prefix")
+load("@rules_pkg//pkg:tar.bzl", "pkg_tar")
+load("@rules_python//python:defs.bzl", "py_binary")
+load("//tools-bazel:library_wrappers.bzl", "jar_pkg_excluded_workspaces", "java_export")
+load("//tools-bazel:version_file.bzl", "write_version_file")
+
+exports_files(
+    [
+        "LICENSE",
+        "NOTICE",
+        "COPYRIGHT",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+py_binary(
+    name = "gen_tags",
+    srcs = ["//tools-bazel:bazel_tag_reader.py"],
+    main = "bazel_tag_reader.py",
+)
+
+write_version_file(
+    name = "version_file",
+    out = "kafka/kafka-version.properties",
+    visibility = ["//visibility:public"],
+)
+
+write_version_file(
+    name = "streams_version_file",
+    out = "kafka/kafka-streams-version.properties",
+    visibility = ["//visibility:public"],
+)
+
+pkg_files(
+    name = "root-licenses",
+    srcs = [
+        "LICENSE-binary",
+        "NOTICE-binary",
+    ],
+    attributes = pkg_attributes(
+        gid = 0,
+        group = "root",
+        mode = "0644",
+        uid = 0,
+        user = "root",
+    ),
+    renames = {
+        "LICENSE-binary": "LICENSE",
+        "NOTICE-binary": "NOTICE",
+    },
+    visibility = ["//:__subpackages__"],
+)
+
+config_setting(
+    name = "include_metrics_reporter",
+    values = {"define": "packageMetricsReporter=true"},
+)
+
+config_setting(
+    name = "include_k2_engine",
+    values = {"define": "packageK2Engine=true"},
+)
+
+pkg_java_library(
+    name = "jar_pkg",
+    excluded_workspaces = jar_pkg_excluded_workspaces,
+    # Both the unshaded and shaded version of clients is being included,
+    # This makes sure to exclude the unshaded one.
+    excludes = select({
+        ":include_metrics_reporter": ["clients_libclients"],
+        "//conditions:default": [
+            "clients_libclients",
+        ],
+    }) + select({
+        ":include_k2_engine": [],
+        "//conditions:default": [
+        ],
+    }),
+    output_directory = "libs",
+    subdir_mapping = {
+        "nettyTcNative": [
+            "netty-tcnative-boringssl",
+            "netty-tcnative-classes",
+        ],
+        "nettyTcNativeFips": [
+            "netty-tcnative-fips-boringssl",
+            "netty-tcnative-classes",
+        ],
+    },
+    targets_with_runtime_classpath = [
+        "//dependencies:netty_tcnative_boringssl_static_all",
+        "//core",
+        "//tools",
+        "//tools/tools-api",
+        "//trogdor",
+        "//shell",
+        "//connect/api",
+        "//connect/runtime",
+        "//connect/transforms",
+        "//connect/json",
+        "//connect/file",
+        "//connect/basic-auth-extension",
+        "//connect/mirror",
+        "//connect/mirror-client",
+        "//streams",
+        "//streams/streams-scala",
+        "//streams/test-utils",
+        "//streams/examples",
+    ],
+    targets_without_runtime_classpath = [
+        "//clients:clients-export",
+    ],
+)
+
+pkg_files(
+    name = "jar_pkg_files",
+    srcs = [
+        ":jar_pkg",
+    ],
+    attributes = pkg_attributes(
+        gid = 0,
+        group = "root",
+        mode = "0644",
+        uid = 0,
+        user = "root",
+    ),
+    strip_prefix = strip_prefix.from_pkg(),
+    visibility = ["//:__subpackages__"],
+)
+
+pkg_tar(
+    name = "core_release_tar",
+    srcs = [
+        ":jar_pkg_files",
+        ":root-licenses",
+        "//bin",
+        "//config",
+        "//licenses",
+    ],
+    extension = "tar.gz",
+    mode = "0755",
+    owner = "65532.65532",
+    ownername = "java.java",
+    package_dir = "/opt/confluent",
+)
+
+filegroup(
+    name = "kafka-resources",
+    srcs = [
+        "NOTICE",
+        "//bin",
+        "//config",
+        "//include",
+    ],
+)
+
+java_export(
+    name = "kafka-resources-lib",
+    gradle_jar_pattern = "kafka-resources/build/libs/kafka-resources-*-ce.jar",
+    gradle_pom = "kafka-resources/build/publications/mavenJava/pom-default.xml",
+    maven_coordinates = "io.confluent:kafka-resources:$(maven_version)",
+    resources = [":kafka-resources"],
+    tags = ["no-javadocs"],
+)
+
+multirun(
+    name = "repin_maven",
+    commands = [
+        "@unpinned_maven//:pin",
+        "@unpinned_maven_compile_only//:pin",
+        "@unpinned_maven_alt_mockito_4_9//:pin",
+        "@unpinned_maven_alt_mockito_4_11//:pin",
+        "@unpinned_maven_alt_easymock_4_3//:pin",
+        "@unpinned_maven_kafka_streams_10//:pin",
+        "@unpinned_maven_kafka_streams_11//:pin",
+        "@unpinned_maven_kafka_streams_20//:pin",
+        "@unpinned_maven_kafka_streams_21//:pin",
+        "@unpinned_maven_kafka_streams_22//:pin",
+        "@unpinned_maven_kafka_streams_23//:pin",
+        "@unpinned_maven_kafka_streams_24//:pin",
+        "@unpinned_maven_kafka_streams_25//:pin",
+        "@unpinned_maven_kafka_streams_26//:pin",
+        "@unpinned_maven_kafka_streams_27//:pin",
+        "@unpinned_maven_kafka_streams_28//:pin",
+        "@unpinned_maven_kafka_streams_30//:pin",
+        "@unpinned_maven_kafka_streams_31//:pin",
+        "@unpinned_maven_kafka_streams_32//:pin",
+        "@unpinned_maven_kafka_streams_33//:pin",
+        "@unpinned_maven_kafka_streams_34//:pin",
+        "@unpinned_maven_kafka_streams_35//:pin",
+        "@unpinned_maven_kafka_streams_36//:pin",
+        "@unpinned_maven_kafka_streams_37//:pin",
+        "@unpinned_maven_kafka_streams_0100//:pin",
+        "@unpinned_maven_kafka_streams_0101//:pin",
+        "@unpinned_maven_kafka_streams_0102//:pin",
+        "@unpinned_maven_kafka_streams_0110//:pin",
+    ],
+    jobs = 0,  # Set to 0 to run in parallel, defaults to sequential
+    tags = ["manual"],
+)
+
+# cli flag to copy JARs from bazel env to kafka repo
+config_setting(
+    name = "copy_jars",
+    values = {"define": "copy_jars=true"},
+    visibility = ["//visibility:public"],
+)
