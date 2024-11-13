@@ -33,6 +33,7 @@ blocks:
       jobs:
         - name: "Build, Test, Release"
           commands:
+            - (cd kafka-bazel && bazel aquery @maven_kafka_streams_28//:org_apache_kafka_connect_api_2_8_2_extension --curses=no)
             - (cd kafka-bazel && bazel aquery @kafka//clients --curses=no)
             - (cd kafka-bazel && bazel build @kafka//... --curses=no)
             # We got build working and want to keep track of it's success.
