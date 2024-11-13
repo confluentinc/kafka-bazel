@@ -33,6 +33,7 @@ blocks:
       jobs:
         - name: "Build, Test, Release"
           commands:
+            - bazel aquery @kafka//clients
             - (cd kafka-bazel && bazel build @kafka//... --curses=no)
             # We got build working and want to keep track of it's success.
             # disable bazel test for now, as it's failing with a lot of errors.
