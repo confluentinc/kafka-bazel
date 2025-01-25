@@ -667,8 +667,8 @@ def maven_install_alternative_mockito():
     maven_install(
         name = "maven_alt_mockito_4_9",
         artifacts = [
-            "org.mockito:mockito-inline:4.9.0",
-            "org.mockito:mockito-junit-jupiter:4.9.0",
+            "org.mockito:mockito-inline:4.11.0",
+            "org.mockito:mockito-junit-jupiter:4.11.0",
         ],
         fail_if_repin_required = True,
         repin_instructions = REPIN_INSTRUCTIONS,
