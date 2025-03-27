@@ -1,4 +1,5 @@
 name: kafka-bazel
+automerge_delay: 1
 lang: java
 lang_version: 21
 git:
