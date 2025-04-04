@@ -2,7 +2,7 @@ version: v1.0
 name: kafka-bazel-full-test-suite
 agent:
   machine:
-    type: s1-prod-ubuntu20-04-arm64-5
+    type: s1-prod-ubuntu24-04-arm64-5
 fail_fast:
   cancel:
     when: "true"
@@ -25,7 +25,7 @@ blocks:
     task:
       agent:
         machine:
-          type: s1-prod-ubuntu20-04-arm64-5
+          type: s1-prod-ubuntu24-04-arm64-5
       prologue:
         commands:
           - echo $SEMAPHORE_WORKFLOW_ID
