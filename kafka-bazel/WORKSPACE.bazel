@@ -495,9 +495,9 @@ container_structure_test_register_toolchain(name = "cst")
 
 http_archive(
     name = "bazel_jar_jar",
-    sha256 = "a9d2ca9a2e9014f8d63dcbe9091bcb9f2d2929b3b7d16836c6225e98f9ca54df",
-    strip_prefix = "bazel_jar_jar-0.1.5",
-    url = "https://github.com/bazeltools/bazel_jar_jar/releases/download/v0.1.5/bazel_jar_jar-v0.1.5.tar.gz",
+    sha256 = "3117f913c732142a795551f530d02c9157b9ea895e6b2de0fbb5af54f03040a5",
+    strip_prefix = "bazel_jar_jar-0.1.6",
+    url = "https://github.com/bazeltools/bazel_jar_jar/releases/download/v0.1.6/bazel_jar_jar-v0.1.6.tar.gz",
 )
 
 load(
