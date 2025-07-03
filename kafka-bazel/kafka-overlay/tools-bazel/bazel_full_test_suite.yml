@@ -16,7 +16,6 @@ global_job_config:
     commands:
       - checkout
       - . vault-setup
-      - . vault-sem-get-secret ci-reporting
       - . vault-sem-get-secret sox-semaphore-build-info
       - sem-version java 21
 blocks:
