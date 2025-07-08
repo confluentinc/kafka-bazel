@@ -701,7 +701,7 @@ def maven_install_alternative_easymock():
     maven_install(
         name = "maven_alt_easymock_4_3",
         artifacts = [
-            "org.easymock:easymock:4.3",
+            "org.easymock:easymock:5.5.0",
         ],
         fail_if_repin_required = True,
         repositories = [
