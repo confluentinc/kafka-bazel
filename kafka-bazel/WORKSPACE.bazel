@@ -484,9 +484,9 @@ oci_register_toolchains(name = "oci")
 
 http_archive(
     name = "container_structure_test",
-    sha256 = "4cbb382d3d7edc97129f79f83196c95e6006d9063d9edbb33a2311ba9372ad39",
-    strip_prefix = "container-structure-test-1.19.3",
-    urls = ["https://github.com/GoogleContainerTools/container-structure-test/archive/refs/tags/v1.19.3.zip"],
+    sha256 = "e8b4c7af96d96f22fb5bd24e3c6aec43d124943955d2df2676cdcef6b67ab00f",
+    strip_prefix = "container-structure-test-1.20.0",
+    urls = ["https://github.com/GoogleContainerTools/container-structure-test/archive/refs/tags/v1.20.0.zip"],
 )
 
 load("@container_structure_test//:repositories.bzl", "container_structure_test_register_toolchain")
