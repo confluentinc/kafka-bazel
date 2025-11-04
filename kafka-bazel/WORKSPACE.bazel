@@ -51,9 +51,9 @@ register_toolchains("@kafka//toolchains:java_21_toolchain_definition")
 # https://github.com/bazel-contrib/rules_jvm/blob/bf9a852622ff7bab53f8c686b20a60b4237bfbc5/repositories.bzl#L69-L74
 http_archive(
     name = "rules_java",
-    sha256 = "302bcd9592377bf9befc8e41aa97ec02df12813d47af9979e4764f3ffdcc5da8",
+    sha256 = "19008f8a85125c9476ef37b6ad945f665d7178aaab3746f7962917ccd87d2477",
     urls = [
-        "https://github.com/bazelbuild/rules_java/releases/download/7.12.4/rules_java-7.12.4.tar.gz",
+        "https://github.com/bazelbuild/rules_java/releases/download/9.0.0/rules_java-9.0.0.tar.gz",
     ],
 )
 
