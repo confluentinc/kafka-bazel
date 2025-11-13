@@ -21,18 +21,12 @@ semaphore:
     - name: Scheduled Run
       branch: master
       pipeline_file: .semaphore/semaphore.yml
-      # every hour
-      at: "0 * * * *"
     - name: Apache Kafka Updater
       branch: master
       pipeline_file: .semaphore/ak-updater.yml
-      # every week on monday
-      at: "0 0 * * MON"
     - name: Build Files Updater
       branch: master
       pipeline_file: .semaphore/build-files-updater.yml
-      # every week on monday
-      at: "0 0 * * MON"
 sonarqube:
   enable: false
 bazel:
