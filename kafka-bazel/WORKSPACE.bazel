@@ -81,7 +81,7 @@ RULES_JVM_EXTERNAL_SHA = "85fd6bad58ac76cc3a27c8e051e4255ff9ccd8c92ba879670d1956
 #
 git_repository(
     name = "rules_jvm_external",
-    commit = "5ec27150ced4eb331668009aabea7dd5176bd01f",
+    commit = "7a12319762452416b294eca3909cda09eb9c3cbf",
     remote = "https://github.com/confluentinc/rules_jvm_external.git",
 )
 
