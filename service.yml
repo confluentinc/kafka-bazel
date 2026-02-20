@@ -27,6 +27,11 @@ semaphore:
     - name: Build Files Updater
       branch: master
       pipeline_file: .semaphore/build-files-updater.yml
+  managed_sections:
+    - version
+    - name
+    - agent
+    - global_job_config
 sonarqube:
   enable: false
 bazel:
