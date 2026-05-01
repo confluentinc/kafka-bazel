@@ -99,7 +99,7 @@ rules_jvm_external_setup()
 # https://(broken link)
 git_repository(
     name = "contrib_rules_jvm",
-    commit = "11bc584e6a9297ca3033dabee21389f74d8437d0",
+    commit = "6dc8ebdc98d5418a6b6c2c270766f0d0aff2f07d",
     remote = "https://github.com/bazel-contrib/rules_jvm.git",
 )
 
