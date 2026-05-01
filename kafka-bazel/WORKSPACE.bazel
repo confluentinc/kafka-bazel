@@ -243,7 +243,7 @@ contrib_rules_jvm_gazelle_setup()
 
 git_repository(
     name = "io_bazel_rules_scala",
-    commit = "8f7fc6d21249415f45f80ad498641461e4777767",
+    commit = "6b46c3cae79b3c4c17b997f54868dd7e5498d980",
     remote = "https://github.com/confluentinc/rules_scala.git",
 )
 
