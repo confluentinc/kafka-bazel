@@ -509,8 +509,8 @@ jar_jar_repositories()
 
 http_archive(
     name = "rules_multirun",
-    sha256 = "e397783c0483a323f5414a09a698a89581114da258f0d41c39434e83d1963084",
-    strip_prefix = "rules_multirun-0.10.0",
-    url = "https://github.com/keith/rules_multirun/archive/refs/tags/0.10.0.tar.gz",
+    sha256 = "052c2d539cc8d7c7ecb4afde4938fd94b482ef86197fccca609cd6595f66eef7",
+    strip_prefix = "rules_multirun-0.14.0",
+    url = "https://github.com/keith/rules_multirun/archive/refs/tags/0.14.0.tar.gz",
 )
 
