@@ -469,9 +469,9 @@ http_archive(
     patches = [
         "@kafka//tools-bazel:1_oci.patch",
     ],
-    sha256 = "1bd16e455278d523f01326e0c3964cd64d7840a7e99cdd6e2617e59f698f3504",
-    strip_prefix = "rules_oci-2.2.0",
-    url = "https://github.com/bazel-contrib/rules_oci/releases/download/v2.2.0/rules_oci-v2.2.0.tar.gz",
+    sha256 = "243eac87ec41d68d1d9e6d21884a50ec28e031f702b0b9fcdc7f97c3f3d5389a",
+    strip_prefix = "rules_oci-2.3.3",
+    url = "https://github.com/bazel-contrib/rules_oci/releases/download/v2.3.3/rules_oci-v2.3.3.tar.gz",
 )
 
 load("@rules_oci//oci:dependencies.bzl", "rules_oci_dependencies")
