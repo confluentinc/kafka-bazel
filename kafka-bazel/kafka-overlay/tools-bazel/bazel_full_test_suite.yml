@@ -15,8 +15,6 @@ global_job_config:
   prologue:
     commands:
       - checkout
-      - . vault-setup
-      - . vault-sem-get-secret sox-semaphore-build-info
       - sem-version java 21
 blocks:
   - name:  "Bazel Test"
