@@ -1,0 +1,12 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "packageRules": [
+    {
+      "description": "maven_alt_mockito_4_9 stays on 4.9.0: --config=scala212 selects it via --define=mockito_version=4.9.0",
+      "matchFileNames": ["kafka-bazel/kafka-overlay/dependencies/dependencies.bzl"],
+      "matchPackageNames": ["org.mockito:mockito-inline", "org.mockito:mockito-junit-jupiter"],
+      "matchCurrentVersion": "4.9.0",
+      "enabled": false
+    }
+  ]
+}
