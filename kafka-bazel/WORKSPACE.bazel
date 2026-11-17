@@ -461,14 +461,6 @@ aspect_bazel_lib_register_toolchains()
 
 http_archive(
     name = "rules_oci",
-    patch_args = [
-        "-p1",
-    ],
-    # This patch is generated from https://github.com/bazel-contrib/rules_oci/pull/672
-    # until the next release of rules_oci
-    patches = [
-        "@kafka//tools-bazel:1_oci.patch",
-    ],
     sha256 = "1bd16e455278d523f01326e0c3964cd64d7840a7e99cdd6e2617e59f698f3504",
     strip_prefix = "rules_oci-2.2.0",
     url = "https://github.com/bazel-contrib/rules_oci/releases/download/v2.2.0/rules_oci-v2.2.0.tar.gz",
