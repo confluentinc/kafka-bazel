@@ -33,7 +33,8 @@ blocks:
       jobs:
         - name: "Build, Test, Release"
           commands:
-            - (cd kafka-bazel && bazel build @kafka//... --curses=no)
+            # The 0.10.0/0.10.1 upgrade system tests need log4j 1.2.17, which the Maven mirror doesn't serve.
+            - (cd kafka-bazel && bazel build --curses=no -- @kafka//... -@kafka//streams/upgrade-system-tests-0100/... -@kafka//streams/upgrade-system-tests-0101/...)
             # We got build working and want to keep track of it's success.
             # disable bazel test for now, as it's failing with a lot of errors.
             # - bazel test @kafka//...
