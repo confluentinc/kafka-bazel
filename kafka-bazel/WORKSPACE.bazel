@@ -454,9 +454,9 @@ rules_jmh_maven_deps()
 
 http_archive(
     name = "aspect_bazel_lib",
-    sha256 = "c96db69dd2714a37f3298338a1a42b27e3a2696c3b36dd4441b9bf7a1a12bee0",
-    strip_prefix = "bazel-lib-2.11.0",
-    url = "https://github.com/aspect-build/bazel-lib/releases/download/v2.11.0/bazel-lib-v2.11.0.tar.gz",
+    sha256 = "10599b11061eb630c81c7c3f4662f98bc70504cf9e0b4b97c948dea092919135",
+    strip_prefix = "bazel-lib-3.8.1",
+    url = "https://github.com/aspect-build/bazel-lib/releases/download/v3.8.1/bazel-lib-v3.8.1.tar.gz",
 )
 
 load("@aspect_bazel_lib//lib:repositories.bzl", "aspect_bazel_lib_dependencies", "aspect_bazel_lib_register_toolchains")
